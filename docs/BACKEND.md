@@ -37,30 +37,25 @@ Editor / Island
 Adding a block requires a stable catalog ID, a registered handler and editor
 fields. A missing handler fails preflight rather than pretending to succeed.
 
-## Planned voice routing: Router API
+## AI text routing and planned voice input
 
-The planned voice flow is:
+The home screen implements text-based workspace routing through Gemini:
 
 ```
-Speech Recognition -> Router API -> Selected Routine -> ExecutionEngine
+Ask Flowy text -> AI Router -> User confirmation -> Selected Routine -> ExecutionEngine
 ```
 
-Speech recognition converts spoken audio into text. The Router API interprets
-that text and selects a matching routine from the user's enabled routines,
-using their names and available descriptions, without requiring users to
-configure spoken triggers. For example, "let's start working" can route to
-the user's "Start Work" routine. If multiple routines fit, ask the user to
-choose rather than guessing.
+Electron main sends only enabled routine IDs, names, descriptions and categories.
+It validates structured output against those IDs, and the renderer rechecks the
+current enabled saved routine before the user can run it. The model cannot create
+or execute actions. Ambiguous, unmatched, stale, invalid and failed requests have
+no side effects. See [AI_ROUTING.md](AI_ROUTING.md) for setup, contracts, privacy,
+security, troubleshooting and provider-extension details.
 
-This replaces the earlier plan to train and run a local deep learning intent
-classifier. Flowy will use a routing API instead; its provider has not yet
-been selected. This describes a future integration, not the current runtime.
-Voice recognition and routing are currently simulated.
-
-The API selects a routine, not arbitrary actions or scripts. Its response must
-be checked against the enabled routine IDs before the existing execution
-engine runs the saved steps. An unmatched or ambiguous request, invalid
-response, or API failure must not execute a routine.
+Speech recognition and wake-word detection are still planned and currently
+simulated in the Test Lab. A future speech recognizer can feed its transcript to
+the same router, but it must preserve explicit confirmation and all current
+validation boundaries.
 
 ## Execution contract
 

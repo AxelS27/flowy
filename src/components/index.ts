@@ -6,3 +6,4 @@ export * from "./routines/RoutineCard";
 export * from "./routines/RoutineEditor";
 export * from "./devlab/DevLabTab";
 export * from "./landing/LandingPage";
+export * from "./chat/WorkspaceChat";

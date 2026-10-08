@@ -234,13 +234,12 @@ export function MainAppView() {
           <LandingPage
             onNavigate={(screen) => setActiveScreen(screen)}
             onCreateRoutine={handleCreateNewRoutine}
-            onSimulateVoice={handleSimulateVoice}
             onRunRoutine={handleRunRoutine}
             routines={routines}
-            isListening={islandState === "listening"}
             mascotState={mascotState}
             isMuted={isMuted}
             onToggleMute={toggleMute}
+            isRoutineRunning={runningRoutineId !== null}
           />
         ) : activeScreen === "lab" ? (
           <div className="space-y-6 max-w-4xl mx-auto w-full">

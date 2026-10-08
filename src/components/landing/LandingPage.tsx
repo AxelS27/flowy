@@ -1,8 +1,8 @@
 import { FC, PointerEvent } from "react";
-import { motion } from "framer-motion";
-import { Mic, LayoutGrid, Plus, FlaskConical, Volume2, VolumeX, ArrowUpRight } from "lucide-react";
+import { LayoutGrid, Plus, FlaskConical, Volume2, VolumeX, ArrowUpRight } from "lucide-react";
 import { FlowyMascot, MascotState } from "../common/FlowyMascot";
 import { LandingBackground } from "./LandingBackground";
+import { WorkspaceChat } from "../chat/WorkspaceChat";
 import { Routine } from "../../types";
 import { sound } from "../../utils/soundEffects";
 import "./landing.css";
@@ -10,18 +10,17 @@ import "./landing.css";
 interface LandingPageProps {
   onNavigate: (tab: "routines" | "lab") => void;
   onCreateRoutine: () => void;
-  onSimulateVoice: () => void;
   onRunRoutine: (routine: Routine) => void;
   routines: Routine[];
-  isListening: boolean;
   mascotState: MascotState;
   isMuted: boolean;
   onToggleMute: () => void;
+  isRoutineRunning: boolean;
 }
 
 export const LandingPage: FC<LandingPageProps> = ({
-  onNavigate, onCreateRoutine, onSimulateVoice, onRunRoutine,
-  routines, isListening, mascotState, isMuted, onToggleMute,
+  onNavigate, onCreateRoutine, onRunRoutine,
+  routines, mascotState, isMuted, onToggleMute, isRoutineRunning,
 }) => {
   const sampleRoutines = routines.filter((routine) => routine.enabled).slice(0, 3);
 
@@ -62,13 +61,13 @@ export const LandingPage: FC<LandingPageProps> = ({
             <p className="mt-3 sm:mt-4 max-w-md text-xs sm:text-sm md:text-base font-semibold leading-relaxed text-ink-muted">
               One tap for the little things you do every day. Flowy takes it from there.
             </p>
-            <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
-              <motion.button whileHover={{ y: -3 }} whileTap={{ y: 3 }} onClick={() => { sound.playWakeChime(); onSimulateVoice(); }} className="flowy-speak-button inline-flex items-center gap-3 rounded-2xl border-2 border-strawberry-dark bg-strawberry px-5 py-3 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-black text-white shadow-tactile-strawberry" title="Simulate a voice command">
-                <Mic size={18} className="sm:w-5 sm:h-5" strokeWidth={2.5} /> {isListening ? "Listening..." : "Talk to Flowy"}
-              </motion.button>
-            </div>
+            <p className="mt-5 sm:mt-6 rounded-2xl border-2 border-grape-dark/20 bg-grape-light px-4 py-2 text-xs font-extrabold text-purple-900">
+              Describe your day below and Flowy will suggest a saved routine.
+            </p>
           </div>
         </section>
+
+        <WorkspaceChat routines={routines} onActivate={onRunRoutine} isAppBusy={isRoutineRunning} />
 
         <div className="relative z-10 flex flex-col gap-4 w-full pt-2">
           <section aria-label="Quick routines" className="flex flex-wrap items-center justify-center lg:justify-start gap-2">

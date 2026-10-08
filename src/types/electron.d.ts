@@ -1,4 +1,5 @@
 import { Routine, RoutineStep } from "./routine";
+import { AiConfigurationStatus, RouteRequest, RouteResult } from "./ai";
 
 export interface StepProgressData {
   routineId: string;
@@ -46,6 +47,11 @@ export interface ElectronAPI {
   simulateWakeWord: (routine?: Routine) => void;
   executeRoutine: (routine: { id: string; steps: RoutineStep[]; runId?: string }) => Promise<{ success: boolean; runId: string; error?: string; code?: string; stepIndex?: number }>;
   cancelRoutine: (runId?: string) => void;
+
+  // AI workspace routing
+  getAiConfiguration: () => Promise<AiConfigurationStatus>;
+  routeIntent: (request: RouteRequest) => Promise<RouteResult>;
+  cancelIntentRoute: (requestId: string) => void;
 
   // Listeners
   onWakeDetected: (callback: (data: { keyword: string }) => void) => () => void;

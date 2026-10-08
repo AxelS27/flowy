@@ -11,3 +11,18 @@ For example, create a **Start Work** routine to open your apps, launch your favo
 3. Add the actions you need and arrange them in order.
 4. Try **Test Run**, then save your routine.
 5. Run it from your routine list and follow its progress in the small panel at the top of your screen.
+
+## Ask Flowy AI setup
+
+The home-page chat can recommend an existing enabled routine from a typed request. It uses the Gemini Developer API and always asks you to confirm before anything runs.
+
+Create a key at [Google AI Studio](https://aistudio.google.com/app/apikey), set it before launching Flowy, and restart the app:
+
+```powershell
+$env:FLOWY_GEMINI_API_KEY = "paste-your-key-here"
+npm run dev
+```
+
+The optional `FLOWY_GEMINI_MODEL` setting defaults to `gemini-2.5-flash`. Never put the key in a `VITE_*` variable or commit it. Free-tier models and quotas are controlled by Google and may change.
+
+See [AI workspace routing](docs/AI_ROUTING.md) for architecture, privacy, security, troubleshooting, and development guidance. Backend execution details are in [docs/BACKEND.md](docs/BACKEND.md).

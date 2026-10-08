@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { Routine, IslandStatusData, RoutineStep } from "./types";
+import { AiConfigurationStatus, RouteRequest, RouteResult } from "./backend/ai/types";
 
 export type { Routine, RoutineStep, IslandStatusData };
 
@@ -42,6 +43,11 @@ const electronAPI = {
   executeRoutine: (routine: { id: string; steps: RoutineStep[]; runId?: string }): Promise<{ success: boolean; runId: string; error?: string; code?: string; stepIndex?: number }> =>
     ipcRenderer.invoke("routine:execute", routine),
   cancelRoutine: (runId?: string) => ipcRenderer.send("routine:cancel", runId),
+
+  // AI workspace routing (selection only; never executes a routine)
+  getAiConfiguration: (): Promise<AiConfigurationStatus> => ipcRenderer.invoke("ai:configuration"),
+  routeIntent: (request: RouteRequest): Promise<RouteResult> => ipcRenderer.invoke("ai:route", request),
+  cancelIntentRoute: (requestId: string) => ipcRenderer.send("ai:cancel", requestId),
 
   // Listeners
   onWakeDetected: (callback: (data: { keyword: string }) => void) => {
