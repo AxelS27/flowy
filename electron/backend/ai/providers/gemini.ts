@@ -1,7 +1,5 @@
 import { RouteDecision, RoutineMetadata } from "../types";
-
-const MAX_RESPONSE_BYTES = 32 * 1024;
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+import { GoogleGenAI } from "@google/genai";
 
 export class ProviderError extends Error {
   constructor(
@@ -35,14 +33,14 @@ export async function routeWithGemini(
     "Return match only when one routine clearly fits; ambiguous with plausible candidate IDs when multiple fit; otherwise no_match.",
   ].join(" ");
 
-  const response = await fetch(`${GEMINI_BASE_URL}/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    signal,
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: instruction }] },
-      contents: [{ role: "user", parts: [{ text: JSON.stringify({ request: text, availableRoutines: routines }) }] }],
-      generationConfig: {
+  const ai = new GoogleGenAI({ apiKey })
+
+  const content = JSON.stringify({ request: text, availableRoutines: routines });
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: content,
+      config: {
+        systemInstruction: instruction,
         temperature: 0,
         maxOutputTokens: 256,
         responseMimeType: "application/json",
@@ -56,29 +54,16 @@ export async function routeWithGemini(
           required: ["status"],
         },
       },
-    }),
-  }).catch((error) => {
-    if (signal.aborted) throw error;
-    throw new ProviderError("OFFLINE", "Could not connect to the AI provider.");
-  });
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new ProviderError("AUTHENTICATION", "The Gemini API key was rejected.");
-    }
-    if (response.status === 429) {
-      throw new ProviderError("RATE_LIMITED", "The Gemini quota is currently exhausted. Try again later.");
-    }
-    throw new ProviderError("PROVIDER_ERROR", `Gemini could not route this request (HTTP ${response.status}).`);
-  }
-
-  const raw = await response.text();
-  if (Buffer.byteLength(raw, "utf8") > MAX_RESPONSE_BYTES) {
-    throw new ProviderError("INVALID_RESPONSE", "The AI provider response was too large.");
-  }
+    }).catch((error) => {
+      if (signal?.aborted) throw error;
+      console.log(error);
+      throw new ProviderError("OFFLINE", "Could not connect to the AI provider.");
+    })
 
   try {
-    return JSON.parse(extractText(JSON.parse(raw))) as RouteDecision;
+    const raw = response.text;
+    if (raw == undefined) throw new ProviderError("INVALID_RESPONSE", "The AI provider returned invalid structured output.");
+    return JSON.parse(raw) as RouteDecision;
   } catch (error) {
     if (error instanceof ProviderError) throw error;
     throw new ProviderError("INVALID_RESPONSE", "The AI provider returned invalid structured output.");
