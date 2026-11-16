@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { Routine, IslandStatusData, RoutineStep } from "./types";
 import { AiConfigurationStatus, RouteRequest, RouteResult } from "./backend/ai/types";
+import {
+  SttConfiguration,
+  SttTranscribeRequest,
+  SttTranscribeResponse,
+} from "./backend/stt/types";
 
 export type { Routine, RoutineStep, IslandStatusData };
 
@@ -48,6 +53,14 @@ const electronAPI = {
   getAiConfiguration: (): Promise<AiConfigurationStatus> => ipcRenderer.invoke("ai:configuration"),
   routeIntent: (request: RouteRequest): Promise<RouteResult> => ipcRenderer.invoke("ai:route", request),
   cancelIntentRoute: (requestId: string) => ipcRenderer.send("ai:cancel", requestId),
+
+  // Speech to Text (STT)
+  getSttConfiguration: (): Promise<SttConfiguration> =>
+    ipcRenderer.invoke("stt:configuration"),
+  transcribeSpeech: (request: SttTranscribeRequest): Promise<SttTranscribeResponse> =>
+    ipcRenderer.invoke("stt:transcribe", request),
+  cancelSpeechTranscribe: (requestId: string) =>
+    ipcRenderer.send("stt:cancel", requestId),
 
   // Listeners
   onWakeDetected: (callback: (data: { keyword: string }) => void) => {

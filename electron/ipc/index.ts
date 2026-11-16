@@ -3,6 +3,7 @@ import { registerIslandIpc } from "./islandIpc";
 import { registerRoutineIpc } from "./routineIpc";
 import { registerCelebrationIpc } from "./celebrationIpc";
 import { registerAiIpc } from "./aiIpc";
+import { registerSttIpc } from "./sttIpc";
 
 export function registerAllIpc() {
   registerWindowIpc();
@@ -10,4 +11,5 @@ export function registerAllIpc() {
   registerRoutineIpc();
   registerCelebrationIpc();
   registerAiIpc();
+  registerSttIpc();
 }
