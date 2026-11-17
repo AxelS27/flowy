@@ -2,6 +2,7 @@ import { FC, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Loader2, Send, Sparkles, X } from "lucide-react";
 import { Routine, RouteDecision } from "../../types";
 import { PushButton } from "../common/PushButton";
+import { VoiceTrigger } from "../stt/VoiceTrigger";
 
 interface WorkspaceChatProps {
   routines: Routine[];
@@ -135,9 +136,20 @@ export const WorkspaceChat: FC<WorkspaceChatProps> = ({ routines, onActivate, is
             placeholder="For example: Set me up for coding"
             className="mt-1.5 w-full resize-none rounded-2xl border-2 border-cream-border bg-cream px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-grape" />
         </label>
-        <PushButton variant="grape" icon={result.kind === "loading" ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
-          disabled={!text.trim() || text.length > 2000 || result.kind === "loading" || configured !== true || !enabledRoutines.length}
-          onClick={() => void submit()}>{result.kind === "loading" ? "Thinking" : "Ask AI"}</PushButton>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <VoiceTrigger
+            disabled={result.kind === "loading" || configured !== true || !enabledRoutines.length}
+            onTranscript={(transcribedText) => {
+              setText((prev) => {
+                const next = prev.trim() ? `${prev.trim()} ${transcribedText}` : transcribedText;
+                return next.slice(0, 2000);
+              });
+            }}
+          />
+          <PushButton variant="grape" icon={result.kind === "loading" ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
+            disabled={!text.trim() || text.length > 2000 || result.kind === "loading" || configured !== true || !enabledRoutines.length}
+            onClick={() => void submit()}>{result.kind === "loading" ? "Thinking" : "Ask AI"}</PushButton>
+        </div>
       </div>
 
       <div className="mt-2 flex flex-wrap gap-2" aria-label="Example requests">
