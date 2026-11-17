@@ -54,10 +54,10 @@ export type SttTranscribeResponse =
       error: string;
     };
 
-export interface SttBridge {
-  getConfiguration: () => Promise<SttConfiguration>;
-  transcribe: (request: SttTranscribeRequest) => Promise<SttTranscribeResponse>;
-  cancel: (requestId: string) => Promise<void>;
+export interface SttElectronAPI {
+  getSttConfiguration: () => Promise<SttConfiguration>;
+  transcribeSpeech: (request: SttTranscribeRequest) => Promise<SttTranscribeResponse>;
+  cancelSpeechTranscribe: (requestId: string) => void;
 }
 
 export type SttUiStatus =
@@ -66,9 +66,3 @@ export type SttUiStatus =
   | "recording"
   | "transcribing"
   | "error";
-
-declare global {
-  interface Window {
-    stt?: SttBridge;
-  }
-}
