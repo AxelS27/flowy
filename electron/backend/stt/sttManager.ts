@@ -3,14 +3,17 @@ import {
   STT_LIMITS,
   SttAllowedMimeType,
   SttConfiguration,
+  SttProvider,
   SttTranscribeRequest,
   SttTranscribeResponse,
 } from "./types";
 import {
-  GeminiSttProvider,
-  SttProvider,
+  GroqWhisperProvider,
   SttProviderError,
-} from "./providers/geminiStt";
+} from "./providers/whisperStt";
+
+// Minimal ~0.1 detik audio WAV 16kHz 16-bit mono (3200 bytes PCM + 44 bytes header)
+const MIN_AUDIO_BYTES = 3_244;
 
 function isAllowedMimeType(value: string): value is SttAllowedMimeType {
   const normalized = value.trim().toLowerCase();
@@ -27,7 +30,7 @@ function estimateDecodedByteLength(base64: string): number {
 export class SttManager {
   private readonly provider: SttProvider;
 
-  constructor(provider: SttProvider = new GeminiSttProvider()) {
+  constructor(provider: SttProvider = new GroqWhisperProvider()) {
     this.provider = provider;
   }
 
@@ -55,11 +58,10 @@ export class SttManager {
         requestId,
         code: "NOT_CONFIGURED",
         error:
-          "Fitur suara belum aktif. Atur FLOWY_GEMINI_API_KEY sebelum menjalankan aplikasi.",
+          "Fitur suara belum aktif. Atur FLOWY_GROQ_API_KEY sebelum menjalankan aplikasi.",
       };
     }
 
-    // 1. Validasi bentuk request
     if (
       !rawRequest ||
       typeof rawRequest.audioBase64 !== "string" ||
@@ -83,15 +85,14 @@ export class SttManager {
       };
     }
 
-    // 2. Validasi ukuran audio (maksimal 5 MiB)
     const cleanBase64 = rawRequest.audioBase64.replace(/\s+/g, "");
     const byteLength = estimateDecodedByteLength(cleanBase64);
-    if (byteLength <= 0) {
+    if (byteLength < MIN_AUDIO_BYTES) {
       return {
         ok: false,
         requestId,
         code: "INVALID_REQUEST",
-        error: "Rekaman audio kosong.",
+        error: "Rekaman suara terlalu singkat. Coba bicara minimal 1 detik.",
       };
     }
     if (byteLength > STT_LIMITS.MAX_AUDIO_BYTES) {
@@ -103,7 +104,6 @@ export class SttManager {
       };
     }
 
-    // 3. Gabungkan AbortSignal dari IPC (cancel manual) dengan Timeout 15 detik
     const timeoutController = new AbortController();
     let timedOut = false;
 

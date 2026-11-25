@@ -17,7 +17,7 @@ function formatDuration(seconds: number): string {
 export const VoiceTrigger: React.FC<VoiceTriggerProps> = ({
   onTranscript,
   disabled = false,
-  language = "id-ID",
+  language,
   className = "",
 }) => {
   const {
@@ -61,7 +61,7 @@ export const VoiceTrigger: React.FC<VoiceTriggerProps> = ({
       return "Input suara hanya tersedia di aplikasi desktop Electron";
     }
     if (!isConfigured) {
-      return "Fitur suara belum aktif (FLOWY_GEMINI_API_KEY belum diatur)";
+      return "Fitur suara belum aktif (FLOWY_GROQ_API_KEY belum diatur)";
     }
     if (status === "requesting-permission") {
       return "Meminta izin mikrofon...";

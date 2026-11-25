@@ -59,3 +59,16 @@ export interface SttBridge {
   transcribe: (request: SttTranscribeRequest) => Promise<SttTranscribeResponse>;
   cancel: (requestId: string) => Promise<void>;
 }
+
+export interface SttProviderInput {
+  audioBase64: string;
+  mimeType: string;
+  language?: string;
+  signal: AbortSignal;
+}
+
+export interface SttProvider {
+  readonly name: string;
+  isConfigured(): boolean;
+  transcribe(input: SttProviderInput): Promise<string>;
+}
