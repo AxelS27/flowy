@@ -25,7 +25,6 @@ import {
 import { Routine, RoutineStep, ActionType, RoutineColor } from "../../types";
 import { PushButton } from "../common/PushButton";
 import { sound } from "../../utils/soundEffects";
-import { fireCelebrationConfetti } from "../../utils/confetti";
 import { PALETTE_BLOCKS, PaletteBlock } from "../../data/actionCatalog";
 import { ActionFields } from "./ActionFields";
 
@@ -304,7 +303,6 @@ export const RoutineEditor: FC<RoutineEditorProps> = ({
           ? `Block #${result.stepIndex + 1}: ${result.error}` : result.error || "Routine failed.");
       } else {
         sound.playFanfare();
-        fireCelebrationConfetti();
       }
     } catch (error) {
       setRunError(error instanceof Error ? error.message : "Could not execute routine.");

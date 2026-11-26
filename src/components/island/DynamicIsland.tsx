@@ -2,7 +2,6 @@ import { FC, useState, useEffect, useRef } from "react";
 import { IslandSurface } from "./IslandSurface";
 import { Routine, IslandState } from "../../types";
 import { sound } from "../../utils/soundEffects";
-import { fireCelebrationConfetti } from "../../utils/confetti";
 
 // UI dwell times only. Backend actions are never delayed for presentation.
 const MINIMUM_EXECUTION_VISIBLE_MS = 2000;
@@ -122,7 +121,6 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
       setRunError("");
     } else if (state === "completed") {
       sound.playFanfare();
-      fireCelebrationConfetti();
 
       celebrationTimerRef.current = setTimeout(() => {
         setIsExiting(true);
