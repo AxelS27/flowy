@@ -273,8 +273,13 @@ export function IslandSurface({
 
             {state === "completed" && (
               <motion.div key="completed" {...contentAnimation} className="island-compact" role="status">
-                <div className="island-icon island-green island-success-halo">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <motion.div
+                  className="island-icon island-green island-success-halo"
+                  initial={reducedMotion ? undefined : { scale: 0.55 }}
+                  animate={reducedMotion ? undefined : { scale: [0.55, 1.18, 1] }}
+                  transition={{ duration: 0.38, ease: "easeOut" }}
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <motion.path
                       d="M5 13l4 4L19 7"
                       initial={{ pathLength: 0 }}
@@ -282,9 +287,11 @@ export function IslandSurface({
                       transition={{ duration: reducedMotion ? 0 : 0.35, ease: "easeOut" }}
                     />
                   </svg>
-                </div>
+                </motion.div>
                 <div className="island-copy">
-                  <p className="island-title">{window.electronAPI ? "Routine Completed" : "Preview Completed"}</p>
+                  <p className="island-title" style={{ color: "#62d98b" }}>
+                    {window.electronAPI ? "Routine Completed" : "Preview Completed"}
+                  </p>
                   <p className="island-caption">
                     {Object.keys(skippedSteps).length ? "Finished (Do Not Disturb skipped)" : routine?.name || "Everything is ready"}
                   </p>
