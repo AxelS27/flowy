@@ -10,8 +10,14 @@ const COMPLETION_VISIBLE_MS = 3000;
 
 interface DynamicIslandProps {
   activeRoutine?: Routine | null;
+  candidates?: Routine[];
   state?: IslandState;
+  subtitle?: string;
+  externalError?: string;
   onStateChange?: (state: IslandState) => void;
+  onStopListening?: () => void;
+  onCancelVoice?: () => void;
+  onSelectCandidate?: (routine: Routine) => void;
   isStandaloneWindow?: boolean;
 }
 
@@ -19,18 +25,25 @@ const stateDimensions: Record<
   IslandState,
   { width: number; height: number; borderRadius: number }
 > = {
-  idle: { width: 220, height: 32, borderRadius: 16 },
-  listening: { width: 300, height: 60, borderRadius: 20 },
-  thinking: { width: 320, height: 60, borderRadius: 20 },
-  executing: { width: 420, height: 180, borderRadius: 24 },
-  completed: { width: 350, height: 64, borderRadius: 20 },
-  failed: { width: 420, height: 168, borderRadius: 24 },
+  idle: { width: 210, height: 32, borderRadius: 16 },
+  listening: { width: 350, height: 56, borderRadius: 22 },
+  thinking: { width: 320, height: 56, borderRadius: 22 },
+  ambiguous: { width: 400, height: 118, borderRadius: 24 },
+  executing: { width: 390, height: 156, borderRadius: 24 },
+  completed: { width: 320, height: 56, borderRadius: 22 },
+  failed: { width: 390, height: 148, borderRadius: 24 },
 };
 
 export const DynamicIsland: FC<DynamicIslandProps> = ({
   activeRoutine,
+  candidates,
   state: externalState,
+  subtitle,
+  externalError,
   onStateChange,
+  onStopListening,
+  onCancelVoice,
+  onSelectCandidate,
   isStandaloneWindow = false,
 }) => {
   const [internalState, setInternalState] = useState<IslandState>(externalState || "idle");
@@ -135,7 +148,7 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
           setCompletedSteps((prev) => [...prev, currentStepIndex]);
           setCurrentStepIndex((prev) => prev + 1);
         } else setState("completed");
-      }, currentStepIndex < activeRoutine.steps.length ? 650 :
+      }, currentStepIndex < activeRoutine.steps.length ? 1000 :
         Math.max(0, MINIMUM_EXECUTION_VISIBLE_MS - (performance.now() - executionVisibleSinceRef.current)));
       return () => { if (stepTimerRef.current) clearTimeout(stepTimerRef.current); };
     }
@@ -202,7 +215,7 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
   // Dynamic island height based on routine steps count
   const getExecutingHeight = () => {
     const stepCount = activeRoutine?.steps.length || 0;
-    return 100 + Math.min(Math.max(stepCount, 1), 4) * 36;
+    return 78 + Math.min(Math.max(stepCount, 1), 4) * 30;
   };
 
   const currentDim = {
@@ -219,15 +232,20 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
     <IslandSurface
       state={state}
       routine={activeRoutine}
+      candidates={candidates}
+      subtitle={subtitle}
       dimensions={currentDim}
       exiting={isExiting}
       standalone={isStandaloneWindow}
       currentStep={currentStepIndex}
       completedSteps={completedSteps}
       skippedSteps={skippedSteps}
-      error={runError}
+      error={externalError || runError}
       registerStep={(index, element) => { stepItemRefs.current[index] = element; }}
       onStop={() => { if (activeRunIdRef.current) window.electronAPI?.cancelRoutine(activeRunIdRef.current); }}
+      onStopListening={onStopListening}
+      onCancelVoice={onCancelVoice}
+      onSelectCandidate={onSelectCandidate}
       onDismiss={() => setState("idle")}
     />
   );

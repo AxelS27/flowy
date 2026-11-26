@@ -21,6 +21,35 @@ const electronAPI = {
   setIslandInteractive: (interactive: boolean) => ipcRenderer.send("island:interactive", interactive),
   resizeIsland: (width: number, height: number) =>
     ipcRenderer.send("island:resize", { width, height }),
+  syncIslandState: (payload: {
+    state: string;
+    routine?: Routine | null;
+    candidates?: Routine[];
+    subtitle?: string;
+    error?: string;
+  }) => ipcRenderer.send("island:sync", payload),
+  sendIslandAction: (action: string) =>
+    ipcRenderer.send("island:action", action),
+
+  onIslandSync: (
+    callback: (payload: {
+      state: string;
+      routine?: Routine | null;
+      candidates?: Routine[];
+      subtitle?: string;
+      error?: string;
+    }) => void
+  ) => {
+    const handler = (_: any, payload: any) => callback(payload);
+    ipcRenderer.on("island:sync", handler);
+    return () => ipcRenderer.removeListener("island:sync", handler);
+  },
+
+  onIslandAction: (callback: (action: string) => void) => {
+    const handler = (_: any, action: any) => callback(action);
+    ipcRenderer.on("island:action", handler);
+    return () => ipcRenderer.removeListener("island:action", handler);
+  },
 
   onIslandActivate: (callback: (routine: Routine | null) => void) => {
     const handler = (_: any, routine: any) => callback(routine);

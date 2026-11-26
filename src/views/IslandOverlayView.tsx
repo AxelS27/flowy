@@ -1,34 +1,40 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { DynamicIsland } from "../components";
 import { Routine, IslandState } from "../types";
 
 export function IslandOverlayView() {
   const [islandState, setIslandState] = useState<IslandState>("idle");
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
-
-  const activateTimer1 = useRef<NodeJS.Timeout | null>(null);
-  const activateTimer2 = useRef<NodeJS.Timeout | null>(null);
+  const [candidates, setCandidates] = useState<Routine[]>([]);
+  const [subtitle, setSubtitle] = useState<string | undefined>(undefined);
+  const [externalError, setExternalError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const api = window.electronAPI;
     if (!api) return;
 
-    // Listen to activate events specifically targeted at this floating overlay
     const cleanupActivate = api.onIslandActivate?.((incomingRoutine: Routine | null) => {
       setActiveRoutine(incomingRoutine);
-      setIslandState("listening");
+      setCandidates([]);
+      setSubtitle(undefined);
+      setExternalError(undefined);
+      setIslandState("executing");
+    });
 
-      if (activateTimer1.current) clearTimeout(activateTimer1.current);
-      if (activateTimer2.current) clearTimeout(activateTimer2.current);
-
-      activateTimer1.current = setTimeout(() => setIslandState("thinking"), 1400);
-      activateTimer2.current = setTimeout(() => setIslandState("executing"), 2500);
+    const cleanupSync = api.onIslandSync?.((payload) => {
+      setIslandState((payload.state as IslandState) || "idle");
+      if (payload.routine !== undefined) setActiveRoutine(payload.routine);
+      setCandidates(payload.candidates || []);
+      setSubtitle(payload.subtitle);
+      setExternalError(payload.error);
+      if (payload.state === "idle") {
+        api.hideIsland?.();
+      }
     });
 
     return () => {
       cleanupActivate?.();
-      if (activateTimer1.current) clearTimeout(activateTimer1.current);
-      if (activateTimer2.current) clearTimeout(activateTimer2.current);
+      cleanupSync?.();
     };
   }, []);
 
@@ -36,7 +42,15 @@ export function IslandOverlayView() {
     <div className="w-screen h-screen bg-transparent flex items-start justify-center pt-0 select-none overflow-hidden">
       <DynamicIsland
         activeRoutine={activeRoutine}
+        candidates={candidates}
         state={islandState}
+        subtitle={subtitle}
+        externalError={externalError}
+        onStopListening={() => window.electronAPI?.sendIslandAction?.("stop-listening")}
+        onCancelVoice={() => window.electronAPI?.sendIslandAction?.("cancel-voice")}
+        onSelectCandidate={(routine) =>
+          window.electronAPI?.sendIslandAction?.(`select-routine:${routine.id}`)
+        }
         onStateChange={(s) => {
           setIslandState(s);
           if (s === "idle") {

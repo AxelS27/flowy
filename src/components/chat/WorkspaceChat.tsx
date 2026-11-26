@@ -138,7 +138,7 @@ export const WorkspaceChat: FC<WorkspaceChatProps> = ({ routines, onActivate, is
         </label>
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <VoiceTrigger
-            disabled={result.kind === "loading" || configured !== true || !enabledRoutines.length}
+            disabled={result.kind === "loading"}
             onTranscript={(transcribedText) => {
               setText((prev) => {
                 const next = prev.trim() ? `${prev.trim()} ${transcribedText}` : transcribedText;

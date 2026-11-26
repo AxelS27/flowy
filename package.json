@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "test:ai-router": "tsc -p tsconfig.electron.json && node --test tests/ai-router.spec.cjs",
+    "test:stt": "tsc -p tsconfig.electron.json && node --test tests/stt.spec.cjs",
     "test": "npm run build && playwright test"
   },
   "dependencies": {

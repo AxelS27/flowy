@@ -31,12 +31,25 @@ function getGroqWhisperConfig(): { apiKey: string; model: string } {
 }
 
 function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  const buf = Buffer.from(base64, "base64");
+  const bytes = new Uint8Array(new ArrayBuffer(buf.length));
+  bytes.set(buf);
   return bytes;
+}
+
+function resolveAudioUploadMeta(mimeType: string): {
+  blobType: string;
+  fileName: string;
+} {
+  const baseType = mimeType.split(";")[0]?.trim().toLowerCase() || "audio/webm";
+  const extMap: Record<string, string> = {
+    "audio/webm": "webm",
+    "audio/ogg": "ogg",
+    "audio/wav": "wav",
+    "audio/mp4": "mp4",
+  };
+  const ext = extMap[baseType] ?? "webm";
+  return { blobType: baseType, fileName: `recording.${ext}` };
 }
 
 /**
@@ -97,13 +110,18 @@ export class GroqWhisperProvider implements SttProvider {
     }
 
     const audioBytes = base64ToUint8Array(input.audioBase64);
-    const audioBlob = new Blob([audioBytes], { type: "audio/wav" });
+    const { blobType, fileName } = resolveAudioUploadMeta(input.mimeType);
+    const audioBlob = new Blob([audioBytes], { type: blobType });
 
     const formData = new FormData();
-    formData.append("file", audioBlob, "recording.wav");
+    formData.append("file", audioBlob, fileName);
     formData.append("model", model);
     formData.append("response_format", "json");
     formData.append("temperature", "0");
+    formData.append(
+      "prompt",
+      "Perintah suara dalam Bahasa Indonesia atau English untuk aplikasi desktop.",
+    );
 
     const lang = normalizeLanguageCode(input.language);
     if (lang) {

@@ -23,6 +23,29 @@ export function registerIslandIpc() {
     safeSend(getMainWindow(), "island:status", { isBusy: true, routine: routineData });
   });
 
+  ipcMain.on("island:sync", (event, payload: unknown) => {
+    if (!isTrustedSender(event) || !payload || typeof payload !== "object") return;
+    const win = createIslandWindow();
+    const state = (payload as { state?: unknown }).state;
+    if (win && !win.isDestroyed()) {
+      if (state !== "idle") {
+        win.show();
+      }
+      if (win.webContents.isLoading()) {
+        win.webContents.once("did-finish-load", () => {
+          safeSend(win, "island:sync", payload);
+        });
+      } else {
+        safeSend(win, "island:sync", payload);
+      }
+    }
+  });
+
+  ipcMain.on("island:action", (event, action: unknown) => {
+    if (!isTrustedSender(event) || typeof action !== "string") return;
+    safeSend(getMainWindow(), "island:action", action);
+  });
+
   ipcMain.on("island:hide", (event) => {
     if (!isTrustedSender(event)) return;
     const win = getIslandWindow();

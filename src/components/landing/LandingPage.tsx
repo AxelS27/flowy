@@ -1,8 +1,7 @@
 import { FC, PointerEvent } from "react";
-import { LayoutGrid, Plus, FlaskConical, Volume2, VolumeX, ArrowUpRight } from "lucide-react";
+import { LayoutGrid, Plus, FlaskConical, Volume2, VolumeX, ArrowUpRight, Mic, Square, Loader2, X } from "lucide-react";
 import { FlowyMascot, MascotState } from "../common/FlowyMascot";
 import { LandingBackground } from "./LandingBackground";
-import { WorkspaceChat } from "../chat/WorkspaceChat";
 import { Routine } from "../../types";
 import { sound } from "../../utils/soundEffects";
 import "./landing.css";
@@ -15,12 +14,26 @@ interface LandingPageProps {
   mascotState: MascotState;
   isMuted: boolean;
   onToggleMute: () => void;
-  isRoutineRunning: boolean;
+  voicePhase: "idle" | "listening" | "thinking" | "error" | "ambiguous";
+  voiceMessage: string;
+  voiceCandidates: Routine[];
+  onToggleVoice: () => void;
+  onCancelVoice: () => void;
 }
 
 export const LandingPage: FC<LandingPageProps> = ({
-  onNavigate, onCreateRoutine, onRunRoutine,
-  routines, mascotState, isMuted, onToggleMute, isRoutineRunning,
+  onNavigate,
+  onCreateRoutine,
+  onRunRoutine,
+  routines,
+  mascotState,
+  isMuted,
+  onToggleMute,
+  voicePhase,
+  voiceMessage,
+  voiceCandidates,
+  onToggleVoice,
+  onCancelVoice,
 }) => {
   const sampleRoutines = routines.filter((routine) => routine.enabled).slice(0, 3);
 
@@ -35,6 +48,9 @@ export const LandingPage: FC<LandingPageProps> = ({
     event.currentTarget.style.removeProperty("--stage-x");
     event.currentTarget.style.removeProperty("--stage-y");
   };
+
+  const isListening = voicePhase === "listening";
+  const isThinking = voicePhase === "thinking";
 
   return (
     <>
@@ -61,13 +77,83 @@ export const LandingPage: FC<LandingPageProps> = ({
             <p className="mt-3 sm:mt-4 max-w-md text-xs sm:text-sm md:text-base font-semibold leading-relaxed text-ink-muted">
               One tap for the little things you do every day. Flowy takes it from there.
             </p>
-            <p className="mt-5 sm:mt-6 rounded-2xl border-2 border-grape-dark/20 bg-grape-light px-4 py-2 text-xs font-extrabold text-purple-900">
-              Describe your day below and Flowy will suggest a saved routine.
-            </p>
+
+            {/* Voice trigger to interact with Dynamic Island & see Flowy's expressions */}
+            <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-2.5">
+              <button
+                type="button"
+                onClick={onToggleVoice}
+                disabled={isThinking}
+                className={[
+                  "inline-flex items-center gap-2.5 rounded-2xl border-2 px-4 py-2.5 text-xs sm:text-sm font-black transition-all active:translate-y-0.5",
+                  isListening
+                    ? "border-strawberry-dark bg-strawberry text-white shadow-[0_3px_0_#E03B6B] animate-pulse"
+                    : isThinking
+                      ? "border-grape-dark/30 bg-grape-light text-purple-900 cursor-wait"
+                      : "border-grape-dark/40 bg-grape text-white shadow-[0_3px_0_#9333EA] hover:brightness-105",
+                ].join(" ")}
+              >
+                {isThinking ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : isListening ? (
+                  <Square size={15} fill="currentColor" />
+                ) : (
+                  <Mic size={16} />
+                )}
+                <span>
+                  {isListening
+                    ? "Listening... Click to run"
+                    : isThinking
+                      ? "Matching routine..."
+                      : "Talk to Flowy (Ctrl+Space)"}
+                </span>
+              </button>
+
+              {(isListening || isThinking || voicePhase === "error" || voicePhase === "ambiguous") && (
+                <button
+                  type="button"
+                  onClick={onCancelVoice}
+                  aria-label="Cancel voice command"
+                  className="inline-flex items-center gap-1 rounded-2xl border-2 border-cream-border bg-white px-3 py-2.5 text-xs font-extrabold text-ink-muted hover:text-ink"
+                >
+                  <X size={14} />
+                  <span>{voicePhase === "error" || voicePhase === "ambiguous" ? "Clear" : "Cancel"}</span>
+                </button>
+              )}
+            </div>
+
+            {voiceMessage && voicePhase !== "idle" && (
+              <div
+                className={[
+                  "mt-3 max-w-md rounded-2xl border-2 px-3.5 py-2 text-xs font-bold",
+                  voicePhase === "error"
+                    ? "border-strawberry/40 bg-strawberry-light text-red-900"
+                    : "border-grape-dark/20 bg-white/90 text-ink",
+                ].join(" ")}
+              >
+                <p>{voiceMessage}</p>
+                {voicePhase === "ambiguous" && voiceCandidates.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {voiceCandidates.map((routine) => (
+                      <button
+                        key={routine.id}
+                        type="button"
+                        onClick={() => {
+                          onCancelVoice();
+                          onRunRoutine(routine);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-grape-dark/30 bg-grape-light px-2.5 py-1 text-xs font-extrabold text-purple-950 hover:bg-grape hover:text-white"
+                      >
+                        <span>{routine.icon}</span>
+                        <span>{routine.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
-
-        <WorkspaceChat routines={routines} onActivate={onRunRoutine} isAppBusy={isRoutineRunning} />
 
         <div className="relative z-10 flex flex-col gap-4 w-full pt-2">
           <section aria-label="Quick routines" className="flex flex-wrap items-center justify-center lg:justify-start gap-2">

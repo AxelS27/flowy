@@ -323,7 +323,7 @@ export const RoutineEditor: FC<RoutineEditorProps> = ({
       setStage("profile");
       return;
     }
-    sound.playFanfare();
+    sound.playPop(580);
     onSave({
       ...routine,
       name: trimmedName,

@@ -3,6 +3,7 @@ export interface RoutineMetadata {
   name: string;
   description?: string;
   category?: string;
+  stepTitles?: string[];
 }
 
 export interface RouteRequest {
@@ -33,6 +34,6 @@ export type RouteResult =
 
 export interface AiConfigurationStatus {
   configured: boolean;
-  provider: "gemini";
+  provider: "gemini" | "groq";
   model: string;
 }

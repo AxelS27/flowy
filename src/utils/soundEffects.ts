@@ -1,24 +1,82 @@
-// Synthesized Audio Haptics using Web Audio API (Zero external assets needed)
+type SoundKey = "step" | "fanfare";
+
+const SOUND_FILES: Record<SoundKey, string> = {
+  step: "sounds/step.mp3",
+  fanfare: "sounds/fanfare.wav",
+};
+
+// Synthesized Audio Haptics for UI pops/snaps/wake + Acoustic Marimba for steps & fanfare
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private buffers = new Map<SoundKey, AudioBuffer>();
+  private loading = new Map<SoundKey, Promise<AudioBuffer | null>>();
 
   constructor() {
     // AudioContext will be initialized on first user interaction
   }
 
   private getContext(): AudioContext | null {
-    if (this.isMuted) return null;
+    if (this.isMuted || typeof window === "undefined") return null;
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
     }
     if (this.ctx && this.ctx.state === "suspended") {
-      this.ctx.resume();
+      void this.ctx.resume();
     }
     return this.ctx;
+  }
+
+  private async loadBuffer(key: SoundKey, ctx: AudioContext): Promise<AudioBuffer | null> {
+    const cached = this.buffers.get(key);
+    if (cached) return cached;
+
+    const inflight = this.loading.get(key);
+    if (inflight) return inflight;
+
+    const promise = (async () => {
+      try {
+        const res = await fetch(SOUND_FILES[key]);
+        if (!res.ok) return null;
+        const arrayBuffer = await res.arrayBuffer();
+        const decoded = await ctx.decodeAudioData(arrayBuffer);
+        this.buffers.set(key, decoded);
+        return decoded;
+      } catch {
+        return null;
+      } finally {
+        this.loading.delete(key);
+      }
+    })();
+
+    this.loading.set(key, promise);
+    return promise;
+  }
+
+  private playBuffer(key: SoundKey, volume = 0.45, playbackRate = 1): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    void this.loadBuffer(key, ctx).then((buffer) => {
+      if (!buffer || this.isMuted) return;
+      try {
+        const source = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
+        gain.gain.value = volume;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        source.start(0);
+      } catch {
+        // Ignore playback errors
+      }
+    });
   }
 
   public setMuted(muted: boolean) {
@@ -37,7 +95,7 @@ class SoundEngine {
     return this.isMuted;
   }
 
-  // Soft organic wooden / bubble pop
+  // Soft organic wooden / bubble pop (original)
   public playPop(freq: number = 480) {
     const ctx = this.getContext();
     if (!ctx) return;
@@ -58,19 +116,18 @@ class SoundEngine {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.08);
-    } catch (e) {
+    } catch {
       // AudioContext error safeguard
     }
   }
 
-  // Crisp mechanical puzzle snap / interlocking click
+  // Crisp mechanical puzzle snap / interlocking click (original)
   public playPuzzleSnap() {
     const ctx = this.getContext();
     if (!ctx) return;
 
     try {
       const now = ctx.currentTime;
-      // Click 1 (subtle transient)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = "sine";
@@ -83,7 +140,6 @@ class SoundEngine {
       osc1.start(now);
       osc1.stop(now + 0.045);
 
-      // Click 2 (warm puzzle latch resonance)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = "triangle";
@@ -94,47 +150,30 @@ class SoundEngine {
       gain2.connect(ctx.destination);
       osc2.start(now + 0.025);
       osc2.stop(now + 0.09);
-    } catch (e) {}
+    } catch {
+      // Ignore playback errors
+    }
   }
 
-  // Soft marimba tap for action checklists
+  // Acoustic marimba major scale: Do, Re, Mi, Fa, Sol, La, Ti, Do
   public playMarimba(noteIndex: number = 0) {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    const scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5]; // Pentatonic C5 scale
-    const freq = scale[noteIndex % scale.length];
-
-    try {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start();
-      osc.stop(ctx.currentTime + 0.16);
-    } catch (e) {}
+    const semitones = [0, 2, 4, 5, 7, 9, 11, 12];
+    const step = semitones[noteIndex % semitones.length];
+    const rate = Math.pow(2, step / 12);
+    this.playBuffer("step", 0.45, rate);
   }
 
-  // Wake chime (friendly two-tone whistle)
+  // Wake chime (original friendly two-tone whistle)
   public playWakeChime() {
     const ctx = this.getContext();
     if (!ctx) return;
 
     try {
       const now = ctx.currentTime;
-      // Tone 1
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = "sine";
-      osc1.frequency.setValueAtTime(587.33, now); // D5
+      osc1.frequency.setValueAtTime(587.33, now);
       gain1.gain.setValueAtTime(0.15, now);
       gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
       osc1.connect(gain1);
@@ -142,45 +181,24 @@ class SoundEngine {
       osc1.start(now);
       osc1.stop(now + 0.13);
 
-      // Tone 2
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = "sine";
-      osc2.frequency.setValueAtTime(880.0, now + 0.1); // A5
+      osc2.frequency.setValueAtTime(880.0, now + 0.1);
       gain2.gain.setValueAtTime(0.18, now + 0.1);
       gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
       osc2.start(now + 0.1);
       osc2.stop(now + 0.29);
-    } catch (e) {}
+    } catch {
+      // Ignore playback errors
+    }
   }
 
-  // Victory Fanfare Chord
+  // Custom G-major marimba fanfare (la sol la si do, fa mi re do do)
   public playFanfare() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C Maj chord
-    notes.forEach((freq, idx) => {
-      try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const start = ctx.currentTime + idx * 0.05;
-
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, start);
-
-        gain.gain.setValueAtTime(0.12, start);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(start);
-        osc.stop(start + 0.36);
-      } catch (e) {}
-    });
+    this.playBuffer("fanfare", 0.55);
   }
 }
 

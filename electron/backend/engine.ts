@@ -9,6 +9,8 @@ import { checkCancelled, wait } from "./runtime";
 import { normalizeStep, resolveAction, text } from "./validation";
 import { broadcast, safeSend } from "../windows/windowManager";
 
+const STEP_INTERVAL_MS = 1000;
+
 export interface ExecutionResult {
   success: boolean;
   runId: string;
@@ -91,6 +93,9 @@ export class ExecutionEngine {
           await item.execute({ signal: controller.signal, parent });
           checkCancelled(controller.signal);
           this.progress(sender, id, runId, index, item.step.title, "completed");
+          if (index < plan.length - 1) {
+            await wait(STEP_INTERVAL_MS, controller.signal);
+          }
         }
         broadcast("routine:finished", { routineId: id, runId, success: true });
         return { success: true, runId };

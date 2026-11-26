@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Wand2, ArrowLeft, Plus, Volume2, VolumeX } from "lucide-react";
 import { Routine, IslandState } from "../types";
@@ -12,6 +12,7 @@ import {
   MascotState,
   PushButton,
 } from "../components";
+import { AudioRecorder } from "../components/stt/AudioRecorder";
 import { useRoutines, useHotkeys, useSoundEffect } from "../hooks";
 import { sound } from "../utils/soundEffects";
 
@@ -46,6 +47,15 @@ export function MainAppView() {
   const autoResetTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activateTimer1 = useRef<NodeJS.Timeout | null>(null);
   const activateTimer2 = useRef<NodeJS.Timeout | null>(null);
+
+  // Voice-to-Island State (STT -> AI Router -> Auto-Run)
+  const [voicePhase, setVoicePhase] = useState<"idle" | "listening" | "thinking" | "error" | "ambiguous">("idle");
+  const [voiceMessage, setVoiceMessage] = useState<string>("");
+  const [voiceCandidates, setVoiceCandidates] = useState<Routine[]>([]);
+  const recorderRef = useRef<AudioRecorder | null>(null);
+  const voiceRequestIdRef = useRef<string | null>(null);
+  const voicePhaseRef = useRef(voicePhase);
+  voicePhaseRef.current = voicePhase;
 
   // Sync mascot state with island state
   useEffect(() => {
@@ -98,11 +108,229 @@ export function MainAppView() {
     }, estimatedTotalMs);
   };
 
+  const handleRunRoutine = useCallback((routine: Routine) => {
+    setActiveRoutine(routine);
+    setRunningRoutineId(routine.id);
+    runningRoutineIdRef.current = routine.id;
+    setIslandState("executing");
+
+    const api = window.electronAPI;
+    if (api?.showIsland) {
+      api.showIsland(routine);
+    }
+
+    if (autoResetTimerRef.current) clearTimeout(autoResetTimerRef.current);
+    if (api) return;
+    const stepCount = routine.steps.length || 3;
+    const estimatedTotalMs = stepCount * 650 + 2500;
+    autoResetTimerRef.current = setTimeout(() => {
+      setIslandState("idle");
+      setRunningRoutineId(null);
+    }, estimatedTotalMs);
+  }, []);
+
+  const cancelVoiceCommand = useCallback(() => {
+    recorderRef.current?.cancel();
+    const pendingId = voiceRequestIdRef.current;
+    voiceRequestIdRef.current = null;
+    if (pendingId) {
+      window.electronAPI?.cancelSpeechTranscribe?.(pendingId);
+      window.electronAPI?.cancelIntentRoute?.(pendingId);
+    }
+    setVoicePhase("idle");
+    setVoiceMessage("");
+    setVoiceCandidates([]);
+    setIslandState("idle");
+    window.electronAPI?.syncIslandState?.({ state: "idle" });
+  }, []);
+
+  const stopAndRouteVoice = useCallback(async () => {
+    const api = window.electronAPI;
+    if (!recorderRef.current || voicePhaseRef.current !== "listening" || !api?.transcribeSpeech) {
+      return;
+    }
+
+    const requestId = crypto.randomUUID();
+    voiceRequestIdRef.current = requestId;
+    setVoicePhase("thinking");
+    setVoiceMessage("Transcribing voice...");
+    setVoiceCandidates([]);
+    setIslandState("thinking");
+    api.syncIslandState?.({ state: "thinking", subtitle: "Transcribing voice..." });
+
+    try {
+      const recorded = await recorderRef.current.stop();
+      if (voiceRequestIdRef.current !== requestId) return;
+
+      const sttRes = await api.transcribeSpeech({
+        requestId,
+        audioBase64: recorded.audioBase64,
+        mimeType: recorded.mimeType,
+      });
+      if (voiceRequestIdRef.current !== requestId) return;
+
+      if (!sttRes.ok) {
+        if (sttRes.code === "CANCELLED") {
+          setVoicePhase("idle");
+          setIslandState("idle");
+          api.syncIslandState?.({ state: "idle" });
+          return;
+        }
+        throw new Error(sttRes.error);
+      }
+
+      const transcript = sttRes.text.trim();
+      if (!transcript) {
+        throw new Error("No speech detected. Please try again.");
+      }
+
+      const enabledRoutines = routines.filter((r) => r.enabled);
+      if (!enabledRoutines.length) {
+        throw new Error("No enabled routines available.");
+      }
+
+      setVoiceMessage(`"${transcript}"`);
+      api.syncIslandState?.({ state: "thinking", subtitle: `"${transcript}"` });
+
+      const aiRes = await api.routeIntent({
+        requestId,
+        text: transcript,
+        routines: enabledRoutines.map(({ id, name, description, category, steps }) => ({
+          id,
+          name,
+          description,
+          category,
+          stepTitles: steps.map((s) => s.title).filter(Boolean).slice(0, 20),
+        })),
+      });
+      if (voiceRequestIdRef.current !== requestId) return;
+      voiceRequestIdRef.current = null;
+
+      if (!aiRes.ok) {
+        if (aiRes.code === "CANCELLED") {
+          setVoicePhase("idle");
+          setIslandState("idle");
+          api.syncIslandState?.({ state: "idle" });
+          return;
+        }
+        throw new Error(aiRes.error);
+      }
+
+      const decision = aiRes.decision;
+      if (decision.status === "match") {
+        const matched = enabledRoutines.find((r) => r.id === decision.routineId);
+        if (!matched) {
+          throw new Error("Matched routine is no longer available.");
+        }
+        setVoicePhase("idle");
+        setVoiceMessage("");
+        handleRunRoutine(matched);
+        return;
+      }
+
+      if (decision.status === "ambiguous") {
+        const candidates = decision.candidateIds
+          .map((id) => enabledRoutines.find((r) => r.id === id))
+          .filter((r): r is Routine => Boolean(r));
+        setVoicePhase("ambiguous");
+        setVoiceMessage(`Multiple routines match "${transcript}":`);
+        setVoiceCandidates(candidates);
+        setIslandState("ambiguous");
+        api.syncIslandState?.({
+          state: "ambiguous",
+          candidates,
+          subtitle: `"${transcript}"`,
+        });
+        return;
+      }
+
+      throw new Error(`No matching routine found for "${transcript}".`);
+    } catch (err) {
+      if (voiceRequestIdRef.current !== requestId) return;
+      voiceRequestIdRef.current = null;
+      const msg = err instanceof Error ? err.message : "Voice command failed.";
+      setVoicePhase("error");
+      setVoiceMessage(msg);
+      setIslandState("failed");
+      api.syncIslandState?.({ state: "failed", error: msg });
+    }
+  }, [routines, handleRunRoutine]);
+
+  const startVoiceCommand = useCallback(async () => {
+    if (voicePhaseRef.current === "listening") {
+      await stopAndRouteVoice();
+      return;
+    }
+    if (voicePhaseRef.current === "thinking" || runningRoutineIdRef.current) {
+      return;
+    }
+
+    const api = window.electronAPI;
+    if (!api?.transcribeSpeech) {
+      handleSimulateVoice();
+      return;
+    }
+
+    if (!recorderRef.current) {
+      recorderRef.current = new AudioRecorder();
+    }
+
+    setVoiceCandidates([]);
+    setVoiceMessage("Listening... Speak your command");
+    setVoicePhase("listening");
+    setIslandState("listening");
+    api.syncIslandState?.({ state: "listening", subtitle: "Speak your command" });
+
+    try {
+      await recorderRef.current.start({
+        maxDurationMs: 30_000,
+        onMaxDurationReached: () => {
+          void stopAndRouteVoice();
+        },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not access microphone.";
+      setVoicePhase("error");
+      setVoiceMessage(msg);
+      setIslandState("failed");
+      api.syncIslandState?.({ state: "failed", error: msg });
+    }
+  }, [stopAndRouteVoice]);
+
+  const startVoiceRef = useRef(startVoiceCommand);
+  startVoiceRef.current = startVoiceCommand;
+  const stopVoiceRef = useRef(stopAndRouteVoice);
+  stopVoiceRef.current = stopAndRouteVoice;
+  const cancelVoiceRef = useRef(cancelVoiceCommand);
+  cancelVoiceRef.current = cancelVoiceCommand;
+
   // Bind global hotkey (Ctrl + Space / Alt + V)
   useHotkeys({
-    onTriggerVoice: handleSimulateVoice,
+    onTriggerVoice: () => void startVoiceRef.current(),
     enabled: true,
   });
+
+  const routinesRef = useRef(routines);
+  routinesRef.current = routines;
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onIslandAction) return;
+    return api.onIslandAction((action) => {
+      if (action === "stop-listening") void stopVoiceRef.current();
+      if (action === "cancel-voice") cancelVoiceRef.current();
+      if (action.startsWith("select-routine:")) {
+        const id = action.slice("select-routine:".length);
+        const picked = routinesRef.current.find((r) => r.id === id && r.enabled);
+        if (picked) {
+          setVoicePhase("idle");
+          setVoiceMessage("");
+          setVoiceCandidates([]);
+          handleRunRoutine(picked);
+        }
+      }
+    });
+  }, [handleRunRoutine]);
 
   // Listen to IPC events from Electron Main
   useEffect(() => {
@@ -147,28 +375,6 @@ export function MainAppView() {
       if (activateTimer2.current) clearTimeout(activateTimer2.current);
     };
   }, [routines]);
-
-  // Run a specific routine directly via the floating island
-  const handleRunRoutine = (routine: Routine) => {
-    setActiveRoutine(routine);
-    setRunningRoutineId(routine.id);
-    runningRoutineIdRef.current = routine.id;
-    setIslandState("executing");
-
-    const api = window.electronAPI;
-    if (api?.showIsland) {
-      api.showIsland(routine);
-    }
-
-    if (autoResetTimerRef.current) clearTimeout(autoResetTimerRef.current);
-    if (api) return;
-    const stepCount = routine.steps.length || 3;
-    const estimatedTotalMs = stepCount * 650 + 2500;
-    autoResetTimerRef.current = setTimeout(() => {
-      setIslandState("idle");
-      setRunningRoutineId(null);
-    }, estimatedTotalMs);
-  };
 
   const handleToggleEnabled = (id: string) => {
     sound.playPop(480);
@@ -239,7 +445,11 @@ export function MainAppView() {
             mascotState={mascotState}
             isMuted={isMuted}
             onToggleMute={toggleMute}
-            isRoutineRunning={runningRoutineId !== null}
+            voicePhase={voicePhase}
+            voiceMessage={voiceMessage}
+            voiceCandidates={voiceCandidates}
+            onToggleVoice={() => void startVoiceCommand()}
+            onCancelVoice={cancelVoiceCommand}
           />
         ) : activeScreen === "lab" ? (
           <div className="space-y-6 max-w-4xl mx-auto w-full">

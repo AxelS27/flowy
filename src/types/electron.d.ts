@@ -1,5 +1,6 @@
 import { Routine, RoutineStep } from "./routine";
 import { AiConfigurationStatus, RouteRequest, RouteResult } from "./ai";
+import { SttElectronAPI } from "./stt";
 
 export interface StepProgressData {
   routineId: string;
@@ -24,7 +25,7 @@ export interface IslandStatusData {
   routine?: Routine;
 }
 
-export interface ElectronAPI {
+export interface ElectronAPI extends SttElectronAPI {
   // Window management
   minimize: () => void;
   maximize: () => void;
@@ -35,8 +36,26 @@ export interface ElectronAPI {
   hideIsland: () => void;
   setIslandInteractive: (interactive: boolean) => void;
   resizeIsland: (width: number, height: number) => void;
+  syncIslandState: (payload: {
+    state: string;
+    routine?: Routine | null;
+    candidates?: Routine[];
+    subtitle?: string;
+    error?: string;
+  }) => void;
+  sendIslandAction: (action: string) => void;
   onIslandActivate: (callback: (routine: Routine | null) => void) => () => void;
   onIslandStatus: (callback: (status: IslandStatusData) => void) => () => void;
+  onIslandSync: (
+    callback: (payload: {
+      state: string;
+      routine?: Routine | null;
+      candidates?: Routine[];
+      subtitle?: string;
+      error?: string;
+    }) => void
+  ) => () => void;
+  onIslandAction: (callback: (action: string) => void) => () => void;
 
   // Full-desktop celebration overlay
   celebrate: () => void;
