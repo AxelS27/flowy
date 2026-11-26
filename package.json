@@ -41,7 +41,8 @@
       {
         "provider": "github",
         "owner": "AxelS27",
-        "repo": "flowy"
+        "repo": "flowy",
+        "releaseType": "release"
       }
     ],
     "win": {
