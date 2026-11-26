@@ -289,7 +289,7 @@ export function IslandSurface({
                   </svg>
                 </motion.div>
                 <div className="island-copy">
-                  <p className="island-title" style={{ color: "#62d98b" }}>
+                  <p className="island-title">
                     {window.electronAPI ? "Routine Completed" : "Preview Completed"}
                   </p>
                   <p className="island-caption">

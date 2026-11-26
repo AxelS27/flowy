@@ -1,44 +1,73 @@
-import { useEffect, useRef } from "react";
-import confetti from "canvas-confetti";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-// A dedicated transparent desktop window, not a canvas clipped to the Island.
+// Dedicated click-through desktop overlay for subtle ambient edge lighting on completion.
 export function CelebrationOverlayView() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [cycle, setCycle] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reducedMotion = useReducedMotion();
+
   useEffect(() => {
-    const canvas = canvasRef.current;
     const api = window.electronAPI;
-    if (!canvas || !api) return;
-    const fire = confetti.create(canvas, { resize: true, useWorker: true });
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const stop = () => {
-      timers.splice(0).forEach(clearTimeout);
-      fire.reset();
+    if (!api) return;
+
+    const clearTimer = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
+
     const celebrate = () => {
-      stop(); // Repeated requests restart, not stack unbounded particle storms.
-      if (motion.matches) return;
-      const colors = ["#64a8ff", "#62d98b", "#af9dff", "#ffc857", "#ff8583", "#ffffff"];
-      const defaults = { colors, ticks: 100, gravity: 1.25, decay: .91, scalar: 1.05, disableForReducedMotion: true };
-      // Burst down and out from the notch, then cannons across both desktop edges.
-      void fire({ ...defaults, particleCount: 140, angle: 270, spread: 145,
-        startVelocity: 42, origin: { x: .5, y: .015 } });
-      timers.push(setTimeout(() => {
-        void fire({ ...defaults, particleCount: 75, angle: 55, spread: 65,
-          startVelocity: 55, origin: { x: .03, y: .55 } });
-        void fire({ ...defaults, particleCount: 75, angle: 125, spread: 65,
-          startVelocity: 55, origin: { x: .97, y: .55 } });
-      }, 180));
+      clearTimer();
+      if (reducedMotion) return;
+      setCycle((c) => c + 1);
+      setVisible(true);
+      timerRef.current = setTimeout(() => {
+        setVisible(false);
+      }, 2400);
     };
+
     const unsubscribe = api.onCelebrationStart(celebrate);
-    motion.addEventListener("change", stop);
-    // Signal only after the listener exists, avoiding first-frame event loss.
     api.celebrationReady();
     return () => {
       unsubscribe();
-      motion.removeEventListener("change", stop);
-      stop();
+      clearTimer();
     };
-  }, []);
-  return <canvas ref={canvasRef} aria-hidden="true" className="fixed inset-0 w-full h-full pointer-events-none" />;
+  }, [reducedMotion]);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            key={cycle}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0.85, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2.3, times: [0, 0.22, 0.65, 1], ease: "easeInOut" }}
+            className="fixed inset-0 pointer-events-none"
+          >
+            {/* Left edge soft emerald ambient glow */}
+            <div
+              className="fixed inset-y-0 left-0 w-40"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 0% 50%, rgba(48, 209, 88, 0.32) 0%, rgba(48, 209, 88, 0.10) 45%, transparent 78%)",
+              }}
+            />
+            {/* Right edge soft emerald ambient glow */}
+            <div
+              className="fixed inset-y-0 right-0 w-40"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 100% 50%, rgba(48, 209, 88, 0.32) 0%, rgba(48, 209, 88, 0.10) 45%, transparent 78%)",
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }

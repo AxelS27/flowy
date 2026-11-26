@@ -121,6 +121,7 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
       setRunError("");
     } else if (state === "completed") {
       sound.playFanfare();
+      window.electronAPI?.celebrate?.();
 
       celebrationTimerRef.current = setTimeout(() => {
         setIsExiting(true);
