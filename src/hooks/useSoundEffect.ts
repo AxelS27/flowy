@@ -3,10 +3,17 @@ import { sound } from "../utils/soundEffects";
 
 export function useSoundEffect() {
   const [isMuted, setIsMuted] = useState<boolean>(() => sound.getMuted());
+  const [isBgmOn, setIsBgmOn] = useState<boolean>(() => sound.getBgmEnabled());
 
   const toggleMute = useCallback(() => {
     const nextState = sound.toggleMute();
     setIsMuted(nextState);
+    return nextState;
+  }, []);
+
+  const toggleBgm = useCallback(() => {
+    const nextState = sound.toggleBgm();
+    setIsBgmOn(nextState);
     return nextState;
   }, []);
 
@@ -24,6 +31,8 @@ export function useSoundEffect() {
   return {
     isMuted,
     toggleMute,
+    isBgmOn,
+    toggleBgm,
     playSound,
   };
 }

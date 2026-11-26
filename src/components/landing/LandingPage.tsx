@@ -1,22 +1,24 @@
 import { FC, PointerEvent } from "react";
-import { LayoutGrid, Plus, FlaskConical, Volume2, VolumeX, ArrowUpRight, Mic, Square, Loader2, X } from "lucide-react";
+import { LayoutGrid, Plus, Settings, Music, VolumeX, ArrowUpRight, Mic, Square, Loader2, X } from "lucide-react";
 import { FlowyMascot, MascotState } from "../common/FlowyMascot";
 import { LandingBackground } from "./LandingBackground";
 import { Routine } from "../../types";
+import { formatHotkeyLabel } from "../settings/SettingsTab";
 import { sound } from "../../utils/soundEffects";
 import "./landing.css";
 
 interface LandingPageProps {
-  onNavigate: (tab: "routines" | "lab") => void;
+  onNavigate: (tab: "routines" | "settings") => void;
   onCreateRoutine: () => void;
   onRunRoutine: (routine: Routine) => void;
   routines: Routine[];
   mascotState: MascotState;
-  isMuted: boolean;
-  onToggleMute: () => void;
+  isBgmOn: boolean;
+  onToggleBgm: () => void;
   voicePhase: "idle" | "listening" | "thinking" | "error" | "ambiguous";
   voiceMessage: string;
   voiceCandidates: Routine[];
+  masterHotkey: string;
   onToggleVoice: () => void;
   onCancelVoice: () => void;
 }
@@ -27,11 +29,12 @@ export const LandingPage: FC<LandingPageProps> = ({
   onRunRoutine,
   routines,
   mascotState,
-  isMuted,
-  onToggleMute,
+  isBgmOn,
+  onToggleBgm,
   voicePhase,
   voiceMessage,
   voiceCandidates,
+  masterHotkey,
   onToggleVoice,
   onCancelVoice,
 }) => {
@@ -57,9 +60,9 @@ export const LandingPage: FC<LandingPageProps> = ({
       <LandingBackground />
       <div className="flowy-home relative isolate mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center gap-6 sm:gap-8 px-6 py-6 sm:px-10 sm:py-8 my-auto z-10">
         <header className="relative z-10 flex justify-end">
-          <button onClick={onToggleMute} className="flex items-center gap-2 rounded-2xl border-2 border-cream-border bg-white px-3 py-2 text-xs font-extrabold text-ink shadow-sm transition-transform active:translate-y-0.5" title={isMuted ? "Unmute sound effects" : "Mute sound effects"} aria-label={isMuted ? "Unmute sound effects" : "Mute sound effects"}>
-            {isMuted ? <VolumeX size={17} className="text-strawberry" /> : <Volume2 size={17} className="text-mint-dark" />}
-            <span className="hidden sm:inline">{isMuted ? "Muted" : "Sound on"}</span>
+          <button onClick={() => { sound.playPop(520); onToggleBgm(); }} className="flex w-9 sm:w-[96px] h-9 items-center justify-center gap-2 rounded-2xl border-2 border-cream-border bg-white text-xs font-extrabold text-ink shadow-sm transition-transform active:translate-y-0.5" title={isBgmOn ? "Turn BGM off" : "Turn BGM on"} aria-label={isBgmOn ? "Turn BGM off" : "Turn BGM on"}>
+            {isBgmOn ? <Music size={16} className="shrink-0 text-mint-dark" /> : <VolumeX size={16} className="shrink-0 text-strawberry" />}
+            <span className="hidden sm:inline">{isBgmOn ? "BGM on" : "BGM off"}</span>
           </button>
         </header>
 
@@ -72,10 +75,10 @@ export const LandingPage: FC<LandingPageProps> = ({
 
           <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left px-2 sm:px-4 order-2 lg:order-2">
             <h2 className="max-w-xl text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.15] tracking-tight text-ink">
-              Make room for <span className="text-strawberry">your day.</span>
+              Cozy up <span className="text-rose-600">your winter.</span>
             </h2>
             <p className="mt-3 sm:mt-4 max-w-md text-xs sm:text-sm md:text-base font-semibold leading-relaxed text-ink-muted">
-              One tap for the little things you do every day. Flowy takes it from there.
+              One tap or a quiet word for the little things you do every day. Flowy takes it from there.
             </p>
 
             {/* Voice trigger to interact with Dynamic Island & see Flowy's expressions */}
@@ -105,7 +108,7 @@ export const LandingPage: FC<LandingPageProps> = ({
                     ? "Listening... Click to run"
                     : isThinking
                       ? "Matching routine..."
-                      : "Talk to Flowy (Ctrl+Space)"}
+                      : `Talk to Flowy (${formatHotkeyLabel(masterHotkey)})`}
                 </span>
               </button>
 
@@ -174,9 +177,9 @@ export const LandingPage: FC<LandingPageProps> = ({
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-mint text-white shadow-[0_3px_0_#14B8A6]"><LayoutGrid size={23} /></span>
               <span className="font-black text-ink">My routines</span><ArrowUpRight size={17} className="ml-auto text-ink-muted" />
             </button>
-            <button onClick={() => { sound.playPop(580); onNavigate("lab"); }} className="flowy-nav-card group flex items-center gap-3 rounded-3xl border-2 border-blueberry-dark/40 bg-blueberry-light p-4 text-left shadow-tactile-card hover:border-blueberry-dark">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blueberry text-white shadow-[0_3px_0_#3B82F6]"><FlaskConical size={23} /></span>
-              <span className="font-black text-ink">Test lab</span><ArrowUpRight size={17} className="ml-auto text-ink-muted" />
+            <button onClick={() => { sound.playPop(580); onNavigate("settings"); }} className="flowy-nav-card group flex items-center gap-3 rounded-3xl border-2 border-blueberry-dark/40 bg-blueberry-light p-4 text-left shadow-tactile-card hover:border-blueberry-dark">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blueberry text-white shadow-[0_3px_0_#3B82F6]"><Settings size={23} /></span>
+              <span className="font-black text-ink">Settings</span><ArrowUpRight size={17} className="ml-auto text-ink-muted" />
             </button>
           </nav>
         </div>

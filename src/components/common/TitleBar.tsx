@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Minus, Square, X } from "lucide-react";
+import { Minus, X } from "lucide-react";
 
 interface TitleBarProps {
   isListening?: boolean;
@@ -8,10 +8,6 @@ interface TitleBarProps {
 export const TitleBar: FC<TitleBarProps> = ({ isListening = false }) => {
   const handleMinimize = () => {
     (window as any).electronAPI?.minimize();
-  };
-
-  const handleMaximize = () => {
-    (window as any).electronAPI?.maximize();
   };
 
   const handleClose = () => {
@@ -49,13 +45,6 @@ export const TitleBar: FC<TitleBarProps> = ({ isListening = false }) => {
           title="Minimize"
         >
           <Minus size={11} strokeWidth={2.5} />
-        </button>
-        <button
-          onClick={handleMaximize}
-          className="w-6 h-6 rounded-lg bg-cream hover:bg-slate-200 border border-cream-border flex items-center justify-center text-ink-muted hover:text-ink transition-colors"
-          title="Maximize"
-        >
-          <Square size={9} strokeWidth={2.5} />
         </button>
         <button
           onClick={handleClose}

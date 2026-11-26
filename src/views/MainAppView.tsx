@@ -7,16 +7,17 @@ import {
   DynamicIsland,
   RoutineCard,
   RoutineEditor,
-  DevLabTab,
+  SettingsTab,
   LandingPage,
   MascotState,
   PushButton,
 } from "../components";
 import { AudioRecorder } from "../components/stt/AudioRecorder";
+import { AppSettingsData } from "../types/electron";
 import { useRoutines, useHotkeys, useSoundEffect } from "../hooks";
 import { sound } from "../utils/soundEffects";
 
-export type AppScreen = "home" | "routines" | "lab";
+export type AppScreen = "home" | "routines" | "settings";
 
 export function MainAppView() {
   const {
@@ -31,7 +32,43 @@ export function MainAppView() {
     toggleRoutine,
   } = useRoutines();
 
-  const { isMuted, toggleMute } = useSoundEffect();
+  const { isMuted, toggleMute, isBgmOn, toggleBgm } = useSoundEffect();
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    let isActive = api?.isWindowActive ? false : document.visibilityState === "visible";
+
+    const applyActive = (active: boolean) => {
+      isActive = active;
+      sound.syncBgmVisibility(active);
+    };
+
+    const onPointerDown = () => {
+      if (isActive) {
+        sound.syncBgmVisibility(true);
+        sound.flushPendingSanta();
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+
+    if (api?.isWindowActive && api?.onWindowActiveChange) {
+      api.isWindowActive().then(applyActive).catch(() => {});
+      const unsub = api.onWindowActiveChange(applyActive);
+      return () => {
+        unsub();
+        window.removeEventListener("pointerdown", onPointerDown);
+      };
+    }
+
+    const syncWeb = () => applyActive(document.visibilityState === "visible");
+    syncWeb();
+    document.addEventListener("visibilitychange", syncWeb);
+    return () => {
+      document.removeEventListener("visibilitychange", syncWeb);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, []);
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [activeScreen, setActiveScreen] = useState<AppScreen>("home");
@@ -40,6 +77,7 @@ export function MainAppView() {
   const [islandState, setIslandState] = useState<IslandState>("idle");
   const [runningRoutineId, setRunningRoutineId] = useState<string | null>(null);
   const runningRoutineIdRef = useRef<string | null>(null);
+  runningRoutineIdRef.current = runningRoutineId;
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [mascotState, setMascotState] = useState<MascotState>("idle");
 
@@ -52,10 +90,27 @@ export function MainAppView() {
   const [voicePhase, setVoicePhase] = useState<"idle" | "listening" | "thinking" | "error" | "ambiguous">("idle");
   const [voiceMessage, setVoiceMessage] = useState<string>("");
   const [voiceCandidates, setVoiceCandidates] = useState<Routine[]>([]);
+  const [appSettings, setAppSettings] = useState<AppSettingsData>({
+    islandIdleMode: "always-on-top",
+    masterHotkey: "CommandOrControl+Space",
+  });
+
+  useEffect(() => {
+    window.electronAPI?.getSettings?.().then(setAppSettings).catch(() => {});
+  }, []);
+
+  const handleUpdateSettings = useCallback(async (patch: Partial<AppSettingsData>) => {
+    const api = window.electronAPI;
+    if (!api?.updateSettings) return { ok: false, error: "Desktop settings require Electron." };
+    const res = await api.updateSettings(patch);
+    setAppSettings(res.settings);
+    return { ok: res.ok, error: res.error };
+  }, []);
   const recorderRef = useRef<AudioRecorder | null>(null);
   const voiceRequestIdRef = useRef<string | null>(null);
   const voicePhaseRef = useRef(voicePhase);
   voicePhaseRef.current = voicePhase;
+  const lastMasterTriggerAtRef = useRef<number>(0);
 
   // Sync mascot state with island state
   useEffect(() => {
@@ -257,11 +312,23 @@ export function MainAppView() {
   }, [routines, handleRunRoutine]);
 
   const startVoiceCommand = useCallback(async () => {
-    if (voicePhaseRef.current === "listening") {
-      await stopAndRouteVoice();
+    const now = Date.now();
+    if (now - lastMasterTriggerAtRef.current < 250) {
       return;
     }
-    if (voicePhaseRef.current === "thinking" || runningRoutineIdRef.current) {
+    lastMasterTriggerAtRef.current = now;
+
+    // Ignore master hotkey while thinking, choosing ambiguous candidates, or executing a routine.
+    if (
+      runningRoutineIdRef.current ||
+      voicePhaseRef.current === "thinking" ||
+      voicePhaseRef.current === "ambiguous"
+    ) {
+      return;
+    }
+
+    if (voicePhaseRef.current === "listening") {
+      await stopAndRouteVoice();
       return;
     }
 
@@ -295,7 +362,7 @@ export function MainAppView() {
       setIslandState("failed");
       api.syncIslandState?.({ state: "failed", error: msg });
     }
-  }, [stopAndRouteVoice]);
+  }, [stopAndRouteVoice, cancelVoiceCommand]);
 
   const startVoiceRef = useRef(startVoiceCommand);
   startVoiceRef.current = startVoiceCommand;
@@ -304,21 +371,42 @@ export function MainAppView() {
   const cancelVoiceRef = useRef(cancelVoiceCommand);
   cancelVoiceRef.current = cancelVoiceCommand;
 
-  // Bind global hotkey (Ctrl + Space / Alt + V)
+  // In Electron, globalShortcut handles Ctrl+Space globally; keep in-app hotkey for browser preview only.
   useHotkeys({
     onTriggerVoice: () => void startVoiceRef.current(),
-    enabled: true,
+    enabled: !window.electronAPI,
   });
 
   const routinesRef = useRef(routines);
   routinesRef.current = routines;
 
   useEffect(() => {
+    const isIslandActive =
+      voicePhase === "listening" ||
+      voicePhase === "thinking" ||
+      voicePhase === "ambiguous" ||
+      islandState === "executing";
+    window.electronAPI?.setEscapeCancelActive?.(isIslandActive);
+  }, [voicePhase, islandState]);
+
+  useEffect(() => {
     const api = window.electronAPI;
     if (!api?.onIslandAction) return;
     return api.onIslandAction((action) => {
+      if (action === "start-voice") void startVoiceRef.current();
       if (action === "stop-listening") void stopVoiceRef.current();
       if (action === "cancel-voice") cancelVoiceRef.current();
+      if (action === "escape-cancel") {
+        if (runningRoutineIdRef.current) {
+          runningRoutineIdRef.current = null;
+          setRunningRoutineId(null);
+          setIslandState("idle");
+          api.cancelRoutine?.();
+          api.syncIslandState?.({ state: "idle" });
+        } else if (voicePhaseRef.current !== "idle") {
+          cancelVoiceRef.current();
+        }
+      }
       if (action.startsWith("select-routine:")) {
         const id = action.slice("select-routine:".length);
         const picked = routinesRef.current.find((r) => r.id === id && r.enabled);
@@ -338,7 +426,7 @@ export function MainAppView() {
     if (!api) return;
 
     const cleanupWake = api.onWakeDetected?.(() => {
-      handleSimulateVoice();
+      void startVoiceRef.current();
     });
 
     const cleanupStatus = api.onIslandStatus?.((status) => {
@@ -358,11 +446,12 @@ export function MainAppView() {
 
     const cleanupFinished = api.onRoutineFinished((result) => {
       if (result.routineId !== runningRoutineIdRef.current) return;
+      runningRoutineIdRef.current = null;
+      setRunningRoutineId(null);
       setIslandState(result.success ? "completed" : "failed");
       if (autoResetTimerRef.current) clearTimeout(autoResetTimerRef.current);
       autoResetTimerRef.current = setTimeout(() => {
         setIslandState("idle");
-        setRunningRoutineId(null);
       }, 4000);
     });
 
@@ -443,17 +532,17 @@ export function MainAppView() {
             onRunRoutine={handleRunRoutine}
             routines={routines}
             mascotState={mascotState}
-            isMuted={isMuted}
-            onToggleMute={toggleMute}
+            isBgmOn={isBgmOn}
+            onToggleBgm={toggleBgm}
             voicePhase={voicePhase}
             voiceMessage={voiceMessage}
             voiceCandidates={voiceCandidates}
+            masterHotkey={appSettings.masterHotkey}
             onToggleVoice={() => void startVoiceCommand()}
             onCancelVoice={cancelVoiceCommand}
           />
-        ) : activeScreen === "lab" ? (
-          <div className="space-y-6 max-w-4xl mx-auto w-full">
-            {/* Top Bar with Back to Home */}
+        ) : activeScreen === "settings" ? (
+          <div className="space-y-6 max-w-3xl mx-auto w-full">
             <div className="flowy-sky-accent flex items-center justify-between gap-3 px-4 py-3">
               <button
                 onClick={() => {
@@ -466,19 +555,12 @@ export function MainAppView() {
                 <span>Home</span>
               </button>
 
-              <h2 className="text-xl font-black text-ink">Test Lab (Dev)</h2>
+              <h2 className="text-xl font-black text-ink">Settings</h2>
 
               <div className="w-20" />
             </div>
 
-            <DevLabTab
-              routines={routines}
-              onTriggerIsland={() =>
-                handleRunRoutine(routines.find((r) => r.enabled) || routines[0])
-              }
-              onSimulateVoice={handleSimulateVoice}
-              isListening={islandState === "listening"}
-            />
+            <SettingsTab settings={appSettings} onUpdate={handleUpdateSettings} />
           </div>
         ) : (
           <div className="space-y-6 max-w-5xl mx-auto w-full">

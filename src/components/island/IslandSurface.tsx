@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertCircle, Check, CheckCircle2, Circle, Loader2, Mic, SkipForward, Square, X } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Circle, Loader2, Mic, SkipForward, Square } from "lucide-react";
 import { IslandState, Routine } from "../../types";
 import "./island.css";
 
@@ -17,6 +17,7 @@ interface IslandSurfaceProps {
   error: string;
   registerStep: (index: number, element: HTMLDivElement | null) => void;
   onStop: () => void;
+  onStartVoice?: () => void;
   onStopListening?: () => void;
   onCancelVoice?: () => void;
   onSelectCandidate?: (routine: Routine) => void;
@@ -38,8 +39,7 @@ export function IslandSurface({
   error,
   registerStep,
   onStop,
-  onStopListening,
-  onCancelVoice,
+  onStartVoice,
   onSelectCandidate,
   onDismiss,
 }: IslandSurfaceProps) {
@@ -78,14 +78,21 @@ export function IslandSurface({
           borderBottomLeftRadius: dimensions.borderRadius,
           borderBottomRightRadius: dimensions.borderRadius,
         }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.65 }}
+        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
         onMouseEnter={() => { if (standalone) window.electronAPI?.setIslandInteractive(true); }}
         onMouseLeave={() => { if (standalone) window.electronAPI?.setIslandInteractive(false); }}
       >
         <div className="island-content">
-          <AnimatePresence mode="wait" initial={false}>
+          <AnimatePresence mode="popLayout" initial={false}>
             {state === "idle" && (
-              <motion.div key="idle" {...contentAnimation} className="island-compact">
+              <motion.div
+                key="idle"
+                {...contentAnimation}
+                className="island-compact"
+                onClick={() => onStartVoice?.()}
+                style={onStartVoice ? { cursor: "pointer" } : undefined}
+                title={onStartVoice ? "Click or press Ctrl+Space to talk to Flowy" : undefined}
+              >
                 <span className="island-indicator" />
                 <span className="island-title island-copy">Flowy</span>
                 <span className="island-caption" style={{ margin: 0 }}>Ready</span>
@@ -109,28 +116,6 @@ export function IslandSurface({
                     />
                   ))}
                 </div>
-                {onStopListening && (
-                  <button
-                    type="button"
-                    className="island-icon-btn is-primary"
-                    onClick={onStopListening}
-                    title="Done speaking"
-                    aria-label="Done speaking"
-                  >
-                    <Check size={14} strokeWidth={2.6} />
-                  </button>
-                )}
-                {onCancelVoice && (
-                  <button
-                    type="button"
-                    className="island-icon-btn"
-                    onClick={onCancelVoice}
-                    title="Cancel"
-                    aria-label="Cancel voice"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
               </motion.div>
             )}
 
@@ -141,17 +126,6 @@ export function IslandSurface({
                   <p className="island-title">Thinking...</p>
                   <p className="island-caption">{subtitle || routine?.name || "Matching your command"}</p>
                 </div>
-                {onCancelVoice && (
-                  <button
-                    type="button"
-                    className="island-icon-btn"
-                    onClick={onCancelVoice}
-                    title="Cancel"
-                    aria-label="Cancel"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
               </motion.div>
             )}
 
@@ -163,17 +137,6 @@ export function IslandSurface({
                     <p className="island-title">Which routine?</p>
                     <p className="island-caption">{subtitle || "Choose one to run"}</p>
                   </div>
-                  {onCancelVoice && (
-                    <button
-                      type="button"
-                      className="island-icon-btn"
-                      onClick={onCancelVoice}
-                      title="Cancel"
-                      aria-label="Cancel"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
                 </div>
                 <div className="island-candidates">
                   {(candidates || []).map((item) => (

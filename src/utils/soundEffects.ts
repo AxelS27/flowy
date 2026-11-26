@@ -1,14 +1,25 @@
-type SoundKey = "step" | "fanfare";
+type SoundKey = "step" | "fanfare" | "santa";
 
 const SOUND_FILES: Record<SoundKey, string> = {
   step: "sounds/step.mp3",
   fanfare: "sounds/fanfare.wav",
+  santa: "sounds/santa.mp3",
 };
 
 // Synthesized Audio Haptics for UI pops/snaps/wake + Acoustic Marimba for steps & fanfare
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private bgmEnabled: boolean = true;
+  private bgmAudio: HTMLAudioElement | null = null;
+  private santaAudio: HTMLAudioElement | null = null;
+  private pendingSantaPlay: boolean = false;
+  private bgmVisible: boolean =
+    typeof window !== "undefined" && (window as unknown as { electronAPI?: { isWindowActive?: unknown } }).electronAPI?.isWindowActive
+      ? false
+      : typeof document !== "undefined"
+        ? document.visibilityState === "visible"
+        : true;
   private buffers = new Map<SoundKey, AudioBuffer>();
   private loading = new Map<SoundKey, Promise<AudioBuffer | null>>();
 
@@ -199,6 +210,69 @@ class SoundEngine {
   // Custom G-major marimba fanfare (la sol la si do, fa mi re do do)
   public playFanfare() {
     this.playBuffer("fanfare", 0.55);
+  }
+
+  // Santa sleigh pass ("Ho ho ho")
+  public playSantaHoHoHo() {
+    if (this.isMuted || typeof window === "undefined" || typeof Audio === "undefined") return;
+    try {
+      if (!this.santaAudio) {
+        const audio = new Audio("sounds/santa.mp3");
+        audio.volume = 0.075;
+        this.santaAudio = audio;
+      }
+      this.santaAudio.currentTime = 0;
+      void this.santaAudio.play().then(() => {
+        this.pendingSantaPlay = false;
+      }).catch(() => {
+        this.pendingSantaPlay = true;
+      });
+    } catch {
+      // Ignore playback errors
+    }
+  }
+
+  public flushPendingSanta(): void {
+    if (this.pendingSantaPlay) {
+      this.playSantaHoHoHo();
+    }
+  }
+
+  private getBgmAudio(): HTMLAudioElement | null {
+    if (typeof window === "undefined" || typeof Audio === "undefined") return null;
+    if (!this.bgmAudio) {
+      const audio = new Audio("sounds/bgm.mp3");
+      audio.loop = true;
+      audio.volume = 0.035;
+      this.bgmAudio = audio;
+    }
+    return this.bgmAudio;
+  }
+
+  public getBgmEnabled(): boolean {
+    return this.bgmEnabled;
+  }
+
+  public syncBgmVisibility(visible: boolean): void {
+    this.bgmVisible = visible;
+    const audio = this.getBgmAudio();
+    if (!audio) return;
+
+    if (this.bgmEnabled && this.bgmVisible) {
+      if (audio.paused) {
+        void audio.play().catch(() => {
+          // Browser autoplay policy may wait for first pointer interaction
+        });
+      }
+    } else if (!audio.paused) {
+      audio.pause();
+    }
+  }
+
+  public toggleBgm(): boolean {
+    this.bgmEnabled = !this.bgmEnabled;
+    this.syncBgmVisibility(this.bgmVisible);
+    return this.bgmEnabled;
   }
 }
 

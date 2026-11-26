@@ -20,6 +20,22 @@ export interface RoutineFinishedData {
   success: boolean;
 }
 
+export type IslandIdleMode = "always-on-top" | "desktop-only";
+
+export interface AppSettingsData {
+  islandIdleMode: IslandIdleMode;
+  masterHotkey: string;
+}
+
+export interface UpdaterStatusData {
+  currentVersion: string;
+  state: "idle" | "checking" | "available" | "not-available" | "downloading" | "downloaded" | "error";
+  latestVersion?: string;
+  downloadPercent?: number;
+  releaseUrl: string;
+  message?: string;
+}
+
 export interface IslandStatusData {
   isBusy: boolean;
   routine?: Routine;
@@ -30,6 +46,8 @@ export interface ElectronAPI extends SttElectronAPI {
   minimize: () => void;
   maximize: () => void;
   close: () => void;
+  isWindowActive?: () => Promise<boolean>;
+  onWindowActiveChange?: (callback: (active: boolean) => void) => () => void;
 
   // Dynamic Island
   showIsland: (routine?: Routine) => void;
@@ -44,6 +62,7 @@ export interface ElectronAPI extends SttElectronAPI {
     error?: string;
   }) => void;
   sendIslandAction: (action: string) => void;
+  setEscapeCancelActive: (active: boolean) => void;
   onIslandActivate: (callback: (routine: Routine | null) => void) => () => void;
   onIslandStatus: (callback: (status: IslandStatusData) => void) => () => void;
   onIslandSync: (
@@ -71,6 +90,22 @@ export interface ElectronAPI extends SttElectronAPI {
   getAiConfiguration: () => Promise<AiConfigurationStatus>;
   routeIntent: (request: RouteRequest) => Promise<RouteResult>;
   cancelIntentRoute: (requestId: string) => void;
+
+  // App Updater
+  getUpdaterStatus: () => Promise<UpdaterStatusData>;
+  checkForUpdates: () => Promise<UpdaterStatusData>;
+  downloadUpdate: () => Promise<UpdaterStatusData>;
+  installUpdate: () => void;
+  openReleasesPage: () => void;
+  onUpdaterStatus: (callback: (status: UpdaterStatusData) => void) => () => void;
+
+  // App Settings
+  getSettings: () => Promise<AppSettingsData>;
+  updateSettings: (patch: Partial<AppSettingsData>) => Promise<{
+    ok: boolean;
+    settings: AppSettingsData;
+    error?: string;
+  }>;
 
   // Listeners
   onWakeDetected: (callback: (data: { keyword: string }) => void) => () => void;

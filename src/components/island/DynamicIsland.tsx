@@ -14,6 +14,7 @@ interface DynamicIslandProps {
   subtitle?: string;
   externalError?: string;
   onStateChange?: (state: IslandState) => void;
+  onStartVoice?: () => void;
   onStopListening?: () => void;
   onCancelVoice?: () => void;
   onSelectCandidate?: (routine: Routine) => void;
@@ -25,7 +26,7 @@ const stateDimensions: Record<
   { width: number; height: number; borderRadius: number }
 > = {
   idle: { width: 210, height: 32, borderRadius: 16 },
-  listening: { width: 350, height: 56, borderRadius: 22 },
+  listening: { width: 300, height: 56, borderRadius: 22 },
   thinking: { width: 320, height: 56, borderRadius: 22 },
   ambiguous: { width: 400, height: 118, borderRadius: 24 },
   executing: { width: 390, height: 156, borderRadius: 24 },
@@ -40,6 +41,7 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
   subtitle,
   externalError,
   onStateChange,
+  onStartVoice,
   onStopListening,
   onCancelVoice,
   onSelectCandidate,
@@ -87,11 +89,9 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
     return () => clearAllTimers();
   }, []);
 
-  // Reset exiting state whenever active state changes
+  // Reset exiting state whenever state changes
   useEffect(() => {
-    if (state !== "idle") {
-      setIsExiting(false);
-    }
+    setIsExiting(false);
   }, [state]);
 
   // Whenever activeRoutine changes, reset step index and clear timers cleanly
@@ -124,10 +124,7 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
       window.electronAPI?.celebrate?.();
 
       celebrationTimerRef.current = setTimeout(() => {
-        setIsExiting(true);
-        exitTimerRef.current = setTimeout(() => {
-          setState("idle");
-        }, 360);
+        setState("idle");
       }, COMPLETION_VISIBLE_MS);
     }
 
@@ -181,6 +178,8 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
         finishTimerRef.current = setTimeout(() => {
           if (mounted) setState("completed");
         }, remaining);
+      } else if (result.code === "CANCELLED") {
+        setState("idle");
       } else {
         setRunError(result.error || "Routine failed.");
         setState("failed");
@@ -205,7 +204,6 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
   useEffect(() => {
     if (state === "executing" && stepItemRefs.current[currentStepIndex]) {
       stepItemRefs.current[currentStepIndex]?.scrollIntoView({
-        behavior: "smooth",
         block: "nearest",
       });
     }
@@ -242,6 +240,7 @@ export const DynamicIsland: FC<DynamicIslandProps> = ({
       error={externalError || runError}
       registerStep={(index, element) => { stepItemRefs.current[index] = element; }}
       onStop={() => { if (activeRunIdRef.current) window.electronAPI?.cancelRoutine(activeRunIdRef.current); }}
+      onStartVoice={onStartVoice}
       onStopListening={onStopListening}
       onCancelVoice={onCancelVoice}
       onSelectCandidate={onSelectCandidate}

@@ -14,6 +14,12 @@ const electronAPI = {
   minimize: () => ipcRenderer.send("window:minimize"),
   maximize: () => ipcRenderer.send("window:maximize"),
   close: () => ipcRenderer.send("window:close"),
+  isWindowActive: (): Promise<boolean> => ipcRenderer.invoke("window:is-active"),
+  onWindowActiveChange: (callback: (active: boolean) => void) => {
+    const handler = (_: any, active: boolean) => callback(Boolean(active));
+    ipcRenderer.on("window:active-change", handler);
+    return () => ipcRenderer.removeListener("window:active-change", handler);
+  },
 
   // Dynamic Island
   showIsland: (routine?: Routine) => ipcRenderer.send("island:show", routine),
@@ -30,6 +36,8 @@ const electronAPI = {
   }) => ipcRenderer.send("island:sync", payload),
   sendIslandAction: (action: string) =>
     ipcRenderer.send("island:action", action),
+  setEscapeCancelActive: (active: boolean) =>
+    ipcRenderer.send("island:escape", active),
 
   onIslandSync: (
     callback: (payload: {
@@ -90,6 +98,23 @@ const electronAPI = {
     ipcRenderer.invoke("stt:transcribe", request),
   cancelSpeechTranscribe: (requestId: string) =>
     ipcRenderer.send("stt:cancel", requestId),
+
+  // App Updater (GitHub Releases)
+  getUpdaterStatus: () => ipcRenderer.invoke("updater:get-status"),
+  checkForUpdates: () => ipcRenderer.invoke("updater:check"),
+  downloadUpdate: () => ipcRenderer.invoke("updater:download"),
+  installUpdate: () => ipcRenderer.send("updater:install"),
+  openReleasesPage: () => ipcRenderer.send("updater:open-releases"),
+  onUpdaterStatus: (callback: (status: any) => void) => {
+    const handler = (_: any, status: any) => callback(status);
+    ipcRenderer.on("updater:status", handler);
+    return () => ipcRenderer.removeListener("updater:status", handler);
+  },
+
+  // App Settings
+  getSettings: () => ipcRenderer.invoke("settings:get"),
+  updateSettings: (patch: { islandIdleMode?: string; masterHotkey?: string }) =>
+    ipcRenderer.invoke("settings:update", patch),
 
   // Listeners
   onWakeDetected: (callback: (data: { keyword: string }) => void) => {

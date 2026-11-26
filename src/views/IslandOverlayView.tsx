@@ -27,9 +27,6 @@ export function IslandOverlayView() {
       setCandidates(payload.candidates || []);
       setSubtitle(payload.subtitle);
       setExternalError(payload.error);
-      if (payload.state === "idle") {
-        api.hideIsland?.();
-      }
     });
 
     return () => {
@@ -46,6 +43,7 @@ export function IslandOverlayView() {
         state={islandState}
         subtitle={subtitle}
         externalError={externalError}
+        onStartVoice={() => window.electronAPI?.sendIslandAction?.("start-voice")}
         onStopListening={() => window.electronAPI?.sendIslandAction?.("stop-listening")}
         onCancelVoice={() => window.electronAPI?.sendIslandAction?.("cancel-voice")}
         onSelectCandidate={(routine) =>
@@ -53,9 +51,6 @@ export function IslandOverlayView() {
         }
         onStateChange={(s) => {
           setIslandState(s);
-          if (s === "idle") {
-            window.electronAPI?.hideIsland?.();
-          }
         }}
         isStandaloneWindow={true}
       />

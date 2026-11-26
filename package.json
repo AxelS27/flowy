@@ -15,12 +15,58 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "test:ai-router": "tsc -p tsconfig.electron.json && node --test tests/ai-router.spec.cjs",
     "test:stt": "tsc -p tsconfig.electron.json && node --test tests/stt.spec.cjs",
-    "test": "npm run build && playwright test"
+    "test": "npm run build && playwright test",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "release:win": "npm run build && electron-builder --win --publish always"
+  },
+  "build": {
+    "appId": "com.flowy.desktop",
+    "productName": "Flowy",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist-electron/native",
+        "to": "native"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AxelS27",
+        "repo": "flowy"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Flowy"
+    }
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "electron-updater": "^6.8.11",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
@@ -38,6 +84,7 @@
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
     "electron": "^34.2.0",
+    "electron-builder": "^26.18.0",
     "postcss": "^8.5.2",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",

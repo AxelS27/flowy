@@ -8,18 +8,18 @@ export function registerWindowIpc() {
     getMainWindow()?.minimize();
   });
 
-  ipcMain.on("window:maximize", (event) => {
-    if (!isTrustedSender(event)) return;
-    const win = getMainWindow();
-    if (win?.isMaximized()) {
-      win.unmaximize();
-    } else {
-      win?.maximize();
-    }
+  ipcMain.on("window:maximize", () => {
+    // Fixed-size control panel; maximize/fullscreen disabled.
   });
 
   ipcMain.on("window:close", (event) => {
     if (!isTrustedSender(event)) return;
     getMainWindow()?.close();
+  });
+
+  ipcMain.handle("window:is-active", (event) => {
+    if (!isTrustedSender(event)) return false;
+    const win = getMainWindow();
+    return Boolean(win && !win.isDestroyed() && win.isVisible() && !win.isMinimized());
   });
 }

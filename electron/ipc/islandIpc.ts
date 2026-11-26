@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
-import { createIslandWindow, releaseIslandLock, positionIslandWindow } from "../windows/islandWindow";
+import { setEscapeCancelActive } from "../hotkey";
+import { applyIslandIdleMode, createIslandWindow, releaseIslandLock, positionIslandWindow } from "../windows/islandWindow";
 import { getIslandWindow, getMainWindow, safeSend } from "../windows/windowManager";
 import { Routine } from "../types";
 import { isTrustedSender } from "./trust";
@@ -10,7 +11,8 @@ export function registerIslandIpc() {
     const win = createIslandWindow();
 
     if (win && !win.isDestroyed()) {
-      win.show();
+      applyIslandIdleMode("active");
+      win.showInactive();
       if (win.webContents.isLoading()) {
         win.webContents.once("did-finish-load", () => {
           safeSend(win, "island:activate", routineData);
@@ -28,9 +30,7 @@ export function registerIslandIpc() {
     const win = createIslandWindow();
     const state = (payload as { state?: unknown }).state;
     if (win && !win.isDestroyed()) {
-      if (state !== "idle") {
-        win.show();
-      }
+      applyIslandIdleMode(state === "idle" ? "idle" : "active");
       if (win.webContents.isLoading()) {
         win.webContents.once("did-finish-load", () => {
           safeSend(win, "island:sync", payload);
@@ -44,6 +44,11 @@ export function registerIslandIpc() {
   ipcMain.on("island:action", (event, action: unknown) => {
     if (!isTrustedSender(event) || typeof action !== "string") return;
     safeSend(getMainWindow(), "island:action", action);
+  });
+
+  ipcMain.on("island:escape", (event, active: unknown) => {
+    if (!isTrustedSender(event) || typeof active !== "boolean") return;
+    setEscapeCancelActive(active);
   });
 
   ipcMain.on("island:hide", (event) => {
@@ -77,7 +82,8 @@ export function registerIslandIpc() {
     const win = createIslandWindow();
 
     if (win && !win.isDestroyed()) {
-      win.show();
+      applyIslandIdleMode("active");
+      win.showInactive();
       if (win.webContents.isLoading()) {
         win.webContents.once("did-finish-load", () => {
           safeSend(win, "island:activate", routineData);

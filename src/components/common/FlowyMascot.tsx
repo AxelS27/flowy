@@ -258,6 +258,31 @@ export const FlowyMascot: FC<FlowyMascotProps> = ({ state = "idle", size = "md",
           <path d="M80 29 C114 29 138 55 138 90 C138 122 123 138 80 138 C37 138 22 122 22 90 C22 55 46 29 80 29 Z" fill={`url(#${gradientId}-jelly)`} stroke={face === "angry" ? "#e46981" : "#b5dcae"} strokeWidth="1.5" />
           <ellipse cx="44" cy="94" rx={face === "angry" ? 11 : 9} ry={face === "angry" ? 8 : 6} fill={face === "angry" ? "#ffc4ca" : "#ffa9bd"} opacity=".85" />
           <ellipse cx="116" cy="94" rx={face === "angry" ? 11 : 9} ry={face === "angry" ? 8 : 6} fill={face === "angry" ? "#ffc4ca" : "#ffa9bd"} opacity=".85" />
+          {/* Cozy Christmas Santa Hat */}
+          <g aria-hidden="true">
+            <path
+              d="M46 36 C50 8 72 -8 98 -4 C112 -2 120 5 122 12 C110 12 102 18 104 34 Z"
+              fill="#e11d48"
+              stroke="#be123c"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M55 29 C60 11 76 3 96 4"
+              fill="none"
+              stroke="#fda4af"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              opacity=".55"
+            />
+            <circle cx="123" cy="12" r="7.5" fill="#ffffff" stroke="#dbeafe" strokeWidth="1.4" />
+            <path
+              d="M42 36 C42 29 58 27 80 27 C102 27 116 29 116 36 C116 42 100 41 80 41 C60 41 42 42 42 36 Z"
+              fill="#ffffff"
+              stroke="#dbeafe"
+              strokeWidth="1.5"
+            />
+          </g>
           {face === "excited" ? (
             <g fill="none" stroke="#473448" strokeWidth="4.5" strokeLinecap="round">
               <path d="M48 80 Q58 63 68 80" /><path d="M92 80 Q102 63 112 80" />

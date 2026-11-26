@@ -4,6 +4,8 @@ import { registerRoutineIpc } from "./routineIpc";
 import { registerCelebrationIpc } from "./celebrationIpc";
 import { registerAiIpc } from "./aiIpc";
 import { registerSttIpc } from "./sttIpc";
+import { registerUpdaterIpc } from "./updaterIpc";
+import { registerSettingsIpc } from "./settingsIpc";
 import { isTrustedSender } from "./trust";
 
 export function registerAllIpc() {
@@ -19,4 +21,6 @@ export function registerAllIpc() {
         senderFrame: sender.mainFrame,
       } as Electron.IpcMainInvokeEvent),
   });
+  registerUpdaterIpc();
+  registerSettingsIpc();
 }

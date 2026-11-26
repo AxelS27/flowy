@@ -1,65 +1,101 @@
 .flowy-home-viewport {
-  background: linear-gradient(180deg, #bce8ff 0%, #c8edff 62%, #e1f6ff 100%);
+  background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 60%, #f8fafc 100%);
 }
-.flowy-home-cloud {
-  position: absolute;
-  z-index: -1;
-  width: 220px;
-  height: 60px;
-  border-radius: 50%;
-  background: #ffffffc0;
-  box-shadow: 0 8px 0 #8bcbe728;
-  pointer-events: none;
-  animation: flowy-cloud-drift 18s ease-in-out infinite alternate;
-}
-.flowy-home-cloud::before, .flowy-home-cloud::after {
-  content: "";
-  position: absolute;
-  bottom: 12px;
-  border-radius: 50%;
-  background: inherit;
-}
-.flowy-home-cloud::before { left: 30px; width: 105px; height: 92px; }
-.flowy-home-cloud::after { right: 28px; width: 88px; height: 80px; }
 
-/* Fixed viewport background clouds (positioned safely below title bar and within screen margins) */
+/* Fixed viewport winter sky background */
 .flowy-sky-bg {
   top: 40px; /* Offset to clear the 40px draggable title bar */
-  background: linear-gradient(180deg, #bce8ff 0%, #c8edff 62%, #e1f6ff 100%);
+  background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 60%, #f8fafc 100%);
 }
 
-.flowy-home-cloud-one { --cloud-scale: 1.05; --cloud-travel: 45px; top: 110px; left: 16%; opacity: .8; }
-.flowy-home-cloud-two { --cloud-scale: 0.95; --cloud-travel: -38px; top: 145px; right: 36px; opacity: .65; animation-duration: 22s; animation-delay: -7s; }
-.flowy-home-cloud-three { --cloud-scale: 1.15; --cloud-travel: 40px; top: 50%; left: 24px; opacity: .55; animation-duration: 18s; animation-delay: -3s; }
-.flowy-home-cloud-four { --cloud-scale: 1.05; --cloud-travel: -45px; bottom: 32px; right: 32px; opacity: .5; animation-duration: 24s; animation-delay: -11s; }
-@keyframes flowy-cloud-drift {
-  from { transform: translate(0, 0) scale(var(--cloud-scale)); }
-  to { transform: translate(var(--cloud-travel), -5px) scale(var(--cloud-scale)); }
+.flowy-santa-sleigh {
+  position: absolute;
+  top: 48px;
+  right: -210px;
+  z-index: 1;
+  opacity: 0;
+  will-change: transform, opacity;
+  contain: layout style paint;
+  animation: flowy-santa-fly 45s linear infinite;
+}
+.flowy-santa-paused,
+.flowy-santa-paused * {
+  animation-play-state: paused !important;
+}
+@keyframes flowy-santa-fly {
+  0% { transform: translate3d(0, 18px, 0) rotate(-3deg); opacity: 0; }
+  2% { opacity: 0.72; }
+  8% { transform: translate3d(-28vw, -18px, 0) rotate(-7deg); }
+  16% { transform: translate3d(-56vw, 14px, 0) rotate(5deg); }
+  24% { transform: translate3d(-84vw, -20px, 0) rotate(-7deg); opacity: 0.72; }
+  32%, 100% { transform: translate3d(calc(-100vw - 240px), -34px, 0) rotate(-4deg); opacity: 0; }
+}
+.flowy-reindeer-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flowy-reindeer-bob 0.52s ease-in-out infinite alternate;
+}
+.flowy-leg-front {
+  transform-box: fill-box;
+  transform-origin: top right;
+  animation: flowy-leg-swing-front 0.36s ease-in-out infinite alternate;
+}
+.flowy-leg-back {
+  transform-box: fill-box;
+  transform-origin: top left;
+  animation: flowy-leg-swing-back 0.36s ease-in-out infinite alternate;
+}
+@keyframes flowy-reindeer-bob {
+  from { transform: translateY(0px) rotate(-2deg); }
+  to { transform: translateY(-2.5px) rotate(3deg); }
+}
+@keyframes flowy-leg-swing-front {
+  from { transform: rotate(-22deg); }
+  to { transform: rotate(22deg); }
+}
+@keyframes flowy-leg-swing-back {
+  from { transform: rotate(22deg); }
+  to { transform: rotate(-22deg); }
 }
 
-.flowy-home-breezes {
+.flowy-snow-layer {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 2;
   overflow: hidden;
   pointer-events: none;
 }
-.flowy-home-breeze {
+.flowy-snowflake,
+.flowy-snowflake-crystal {
   position: absolute;
-  left: -130px;
-  width: 120px;
-  height: 48px;
-  opacity: 0;
-  animation-name: flowy-breeze-pass;
+  top: -20px;
+  will-change: transform;
+  contain: layout style paint;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
-.flowy-home-breeze svg { display: block; width: 100%; height: 100%; }
-@keyframes flowy-breeze-pass {
-  0%, 6% { opacity: 0; transform: translateX(0) scale(var(--breeze-scale, 1)); }
-  12% { opacity: .5; }
-  78% { opacity: .5; }
-  90%, 100% { opacity: 0; transform: translateX(calc(100vw + 240px)) scale(var(--breeze-scale, 1)); }
+.flowy-snowflake {
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(96, 165, 250, 0.55);
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.45);
+  animation-name: flowy-snow-fall;
+}
+.flowy-snowflake-crystal {
+  filter: drop-shadow(0 1px 3px rgba(59, 130, 246, 0.4));
+  animation-name: flowy-snow-crystal-fall;
+}
+@keyframes flowy-snow-fall {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  75% { opacity: 0.75; }
+  100% { transform: translate3d(-12px, calc(100vh - 30px), 0); opacity: 0; }
+}
+@keyframes flowy-snow-crystal-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.9; }
+  75% { opacity: 0.75; }
+  100% { transform: translate3d(14px, calc(100vh - 30px), 0) rotate(320deg); opacity: 0; }
 }
 
 .flowy-stage {
@@ -73,14 +109,13 @@
 .flowy-stage::after {
   content: "";
   position: absolute;
-  bottom: 24px;
+  bottom: 20px;
   left: 50%;
-  width: 200px;
-  height: 24px;
+  width: 220px;
+  height: 28px;
   border-radius: 50%;
   transform: translateX(-50%) scale(var(--stage-scale));
-  background: #3989ab35;
-  filter: blur(12px);
+  background: radial-gradient(ellipse at center, rgba(57, 137, 171, 0.24) 0%, transparent 72%);
   pointer-events: none;
 }
 .flowy-stage-character {
@@ -107,12 +142,59 @@
 
 @media (max-width: 640px) {
   .flowy-stage { min-height: 230px; --stage-scale: 0.68; }
-  .flowy-home-cloud-four,
-  .flowy-home-cloud-three { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flowy-home-breezes { display: none; }
-  .flowy-home-cloud { animation: none; transform: scale(var(--cloud-scale)); }
+  .flowy-santa-sleigh {
+  position: absolute;
+  top: 48px;
+  right: -210px;
+  z-index: 1;
+  opacity: 0;
+  will-change: transform, opacity;
+  contain: layout style paint;
+  animation: flowy-santa-fly 45s linear infinite;
+}
+.flowy-santa-paused,
+.flowy-santa-paused * {
+  animation-play-state: paused !important;
+}
+@keyframes flowy-santa-fly {
+  0% { transform: translate3d(0, 18px, 0) rotate(-3deg); opacity: 0; }
+  2% { opacity: 0.72; }
+  8% { transform: translate3d(-28vw, -18px, 0) rotate(-7deg); }
+  16% { transform: translate3d(-56vw, 14px, 0) rotate(5deg); }
+  24% { transform: translate3d(-84vw, -20px, 0) rotate(-7deg); opacity: 0.72; }
+  32%, 100% { transform: translate3d(calc(-100vw - 240px), -34px, 0) rotate(-4deg); opacity: 0; }
+}
+.flowy-reindeer-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flowy-reindeer-bob 0.52s ease-in-out infinite alternate;
+}
+.flowy-leg-front {
+  transform-box: fill-box;
+  transform-origin: top right;
+  animation: flowy-leg-swing-front 0.36s ease-in-out infinite alternate;
+}
+.flowy-leg-back {
+  transform-box: fill-box;
+  transform-origin: top left;
+  animation: flowy-leg-swing-back 0.36s ease-in-out infinite alternate;
+}
+@keyframes flowy-reindeer-bob {
+  from { transform: translateY(0px) rotate(-2deg); }
+  to { transform: translateY(-2.5px) rotate(3deg); }
+}
+@keyframes flowy-leg-swing-front {
+  from { transform: rotate(-22deg); }
+  to { transform: rotate(22deg); }
+}
+@keyframes flowy-leg-swing-back {
+  from { transform: rotate(22deg); }
+  to { transform: rotate(-22deg); }
+}
+
+.flowy-snow-layer { display: none; }
   .flowy-stage-character, .flowy-nav-card { transition: none; }
   .flowy-nav-card:hover, .flowy-nav-card:active { transform: none; }
 }
