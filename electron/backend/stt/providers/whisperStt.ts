@@ -12,7 +12,7 @@ export class SttProviderError extends Error {
 
 const GROQ_TRANSCRIPTION_ENDPOINT =
   "https://api.groq.com/openai/v1/audio/transcriptions";
-const DEFAULT_GROQ_WHISPER_MODEL = "whisper-large-v3-turbo";
+const DEFAULT_GROQ_WHISPER_MODEL = "whisper-large-v3";
 
 function readEnv(key: string): string {
   const proc = (
@@ -120,13 +120,11 @@ export class GroqWhisperProvider implements SttProvider {
     formData.append("temperature", "0");
     formData.append(
       "prompt",
-      "Perintah suara dalam Bahasa Indonesia atau English untuk aplikasi desktop.",
+      "gw mau coding nih, buka coding 2, mabar, tidur, kerja, istirahat, Chrome, VS Code, Spotify, Discord, Steam.",
     );
 
-    const lang = normalizeLanguageCode(input.language);
-    if (lang) {
-      formData.append("language", lang);
-    }
+    const lang = normalizeLanguageCode(input.language) ?? "id";
+    formData.append("language", lang);
 
     let response: Response;
     try {

@@ -26,7 +26,8 @@ export async function routeWithGroq(
     body: JSON.stringify({
       model,
       temperature: 0,
-      max_tokens: 256,
+      max_completion_tokens: 1024,
+      reasoning_effort: "low",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: instruction },

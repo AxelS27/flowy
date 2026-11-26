@@ -221,6 +221,7 @@ export function MainAppView() {
         requestId,
         audioBase64: recorded.audioBase64,
         mimeType: recorded.mimeType,
+        language: "id-ID",
       });
       if (voiceRequestIdRef.current !== requestId) return;
 
@@ -259,10 +260,10 @@ export function MainAppView() {
         })),
       });
       if (voiceRequestIdRef.current !== requestId) return;
-      voiceRequestIdRef.current = null;
 
       if (!aiRes.ok) {
         if (aiRes.code === "CANCELLED") {
+          voiceRequestIdRef.current = null;
           setVoicePhase("idle");
           setIslandState("idle");
           api.syncIslandState?.({ state: "idle" });
@@ -277,6 +278,7 @@ export function MainAppView() {
         if (!matched) {
           throw new Error("Matched routine is no longer available.");
         }
+        voiceRequestIdRef.current = null;
         setVoicePhase("idle");
         setVoiceMessage("");
         handleRunRoutine(matched);
@@ -284,6 +286,7 @@ export function MainAppView() {
       }
 
       if (decision.status === "ambiguous") {
+        voiceRequestIdRef.current = null;
         const candidates = decision.candidateIds
           .map((id) => enabledRoutines.find((r) => r.id === id))
           .filter((r): r is Routine => Boolean(r));
@@ -308,6 +311,12 @@ export function MainAppView() {
       setVoiceMessage(msg);
       setIslandState("failed");
       api.syncIslandState?.({ state: "failed", error: msg });
+      if (autoResetTimerRef.current) clearTimeout(autoResetTimerRef.current);
+      autoResetTimerRef.current = setTimeout(() => {
+        setVoicePhase((prev) => (prev === "error" ? "idle" : prev));
+        setIslandState((prev) => (prev === "failed" ? "idle" : prev));
+        api.syncIslandState?.({ state: "idle" });
+      }, 2800);
     }
   }, [routines, handleRunRoutine]);
 

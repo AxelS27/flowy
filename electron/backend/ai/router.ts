@@ -71,6 +71,10 @@ function escapeRegex(value: string): string {
 
 function tryFastNameMatch(text: string, routines: RoutineMetadata[]): RouteDecision | null {
   const normalized = text.toLowerCase();
+  if (/\b(bukan|jangan|gak jadi|enggak jadi|nggak jadi|not|eh salah|ganti)\b/i.test(normalized)) {
+    return null;
+  }
+
   const hits = routines.filter((routine) => {
     const name = routine.name.trim().toLowerCase();
     if (name.length < 2) return false;
@@ -81,12 +85,20 @@ function tryFastNameMatch(text: string, routines: RoutineMetadata[]): RouteDecis
   }
   if (hits.length === 1) {
     const hitName = hits[0].name.trim().toLowerCase();
-    const hasSimilar = routines.some((other) => {
+    const similar = routines.filter((other) => {
       if (other.id === hits[0].id) return false;
       const otherName = other.name.trim().toLowerCase();
       return otherName.includes(hitName) || hitName.includes(otherName);
     });
-    if (hasSimilar) return null;
+    if (similar.length > 0) {
+      if (/\b(biasa|pertama|1)\b/i.test(normalized)) {
+        return { status: "match", routineId: hits[0].id };
+      }
+      if (!/\b\d+\b/.test(normalized)) {
+        return { status: "ambiguous", candidateIds: [hits[0], ...similar].slice(0, 5).map((r) => r.id) };
+      }
+      return null;
+    }
     return { status: "match", routineId: hits[0].id };
   }
   return null;

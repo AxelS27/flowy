@@ -3,7 +3,6 @@ import { LayoutGrid, Plus, Settings, Music, VolumeX, ArrowUpRight, Mic, Square, 
 import { FlowyMascot, MascotState } from "../common/FlowyMascot";
 import { LandingBackground } from "./LandingBackground";
 import { Routine } from "../../types";
-import { formatHotkeyLabel } from "../settings/SettingsTab";
 import { sound } from "../../utils/soundEffects";
 import "./landing.css";
 
@@ -34,7 +33,6 @@ export const LandingPage: FC<LandingPageProps> = ({
   voicePhase,
   voiceMessage,
   voiceCandidates,
-  masterHotkey,
   onToggleVoice,
   onCancelVoice,
 }) => {
@@ -75,7 +73,7 @@ export const LandingPage: FC<LandingPageProps> = ({
 
           <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left px-2 sm:px-4 order-2 lg:order-2">
             <h2 className="max-w-xl text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.15] tracking-tight text-ink">
-              Cozy up <span className="text-rose-600">your winter.</span>
+              What are we <span className="text-rose-600">doing today?</span>
             </h2>
             <p className="mt-3 sm:mt-4 max-w-md text-xs sm:text-sm md:text-base font-semibold leading-relaxed text-ink-muted">
               One tap or a quiet word for the little things you do every day. Flowy takes it from there.
@@ -108,7 +106,7 @@ export const LandingPage: FC<LandingPageProps> = ({
                     ? "Listening... Click to run"
                     : isThinking
                       ? "Matching routine..."
-                      : `Talk to Flowy (${formatHotkeyLabel(masterHotkey)})`}
+                      : "Talk to Flowy"}
                 </span>
               </button>
 

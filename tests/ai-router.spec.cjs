@@ -47,3 +47,29 @@ test('rejects oversized or empty requests before calling the provider', async ()
   assert.equal(result.code, 'INVALID_REQUEST');
   assert.equal(called, false);
 });
+
+test('returns ambiguous when numbered variants exist and user does not specify one', async () => {
+  const variantRoutines = [
+    { id: 'coding', name: 'Coding', description: 'Open VS Code' },
+    { id: 'coding2', name: 'Coding 2', description: 'Open Cursor' },
+  ];
+  const ambig = await routeIntent(
+    { requestId: 'req-ambig', text: 'gw mau coding nih', routines: variantRoutines },
+    new AbortController().signal,
+  );
+  assert.deepEqual(ambig, {
+    ok: true,
+    requestId: 'req-ambig',
+    decision: { status: 'ambiguous', candidateIds: ['coding', 'coding2'] },
+  });
+
+  const explicit = await routeIntent(
+    { requestId: 'req-biasa', text: 'gw mau coding biasa', routines: variantRoutines },
+    new AbortController().signal,
+  );
+  assert.deepEqual(explicit, {
+    ok: true,
+    requestId: 'req-biasa',
+    decision: { status: 'match', routineId: 'coding' },
+  });
+});
