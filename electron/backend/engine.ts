@@ -9,7 +9,7 @@ import { checkCancelled, wait } from "./runtime";
 import { normalizeStep, resolveAction, text } from "./validation";
 import { broadcast, safeSend } from "../windows/windowManager";
 
-const STEP_INTERVAL_MS = 1000;
+const STEP_INTERVAL_MS = 500;
 
 export interface ExecutionResult {
   success: boolean;

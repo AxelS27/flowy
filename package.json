@@ -1,6 +1,6 @@
 {
   "name": "flowy-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Flowy Desktop - Gamified & Playful Voice Automation for Windows",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      ".env",
       "package.json"
     ],
     "extraResources": [
